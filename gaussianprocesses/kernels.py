@@ -49,6 +49,37 @@ class Kernel(ABC):
         """Compute the gradient of the covariance matrix"""
         pass
 
+    def __add__(self, other):
+        return Sum([self, other])
+
+
+class Combination(Kernel):
+    """Combine a list of kernels"""
+
+    def __init__(self, kernels):
+        self.kernel_list = kernels
+
+    @abstractmethod
+    def _combine(self):
+        """Method to combine the kernel functions"""
+        pass
+
+    def kernel_function(self, x1, x2):
+        return self._combine([k.kernel_function(x1, x2) for k in self.kernel_list])
+
+    def kernel_gradient(self, x1, x2):
+        return self._combine([k.kernel_gradient(x1, x2) for k in self.kernel_list])
+
+
+class Sum(Combination):
+    """Calculate the sum of kernels"""
+
+    def _combine(self, l):
+        s = l[0]
+        for elem in l[1:]:
+            s = s + elem
+        return s
+
 
 class SquaredExponential(Kernel):
     """A squared exponential kernel"""
@@ -59,8 +90,8 @@ class SquaredExponential(Kernel):
                   + np.sum(x2**2, 1)
                   - 2 * np.dot(x1, x2.T)
                   )
-        cov = self.parameters[0]**2 * np.exp(-0.5 * sqdist / params[1]**2)
-        noise = params[-1]**2 * np.eye(x1.shape[0])
+        cov = self.parameters[0]**2 * np.exp(-0.5 * sqdist / self.parameters[1]**2)
+        noise = self.parameters[-1]**2 * np.eye(x1.shape[0])
         return cov + noise
 
     def kernel_gradient(self, x1, x2):
@@ -70,9 +101,9 @@ class SquaredExponential(Kernel):
                   - 2 * np.dot(x1, x2.T)
                   )
         k = self.kernel_function(x1, x2)
-        gradients = [2 * params[0] * k,
-                     np.multiply(sqdist / params[1]**3, k),
-                     2 * params[-1] * np.eys(x1.shape[0]
+        gradients = [2 * self.parameters[0] * k,
+                     np.multiply(sqdist / self.parameters[1]**3, k),
+                     2 * self.parameters[-1] * np.eye(x1.shape[0])
                      ]
         return gradients
 
@@ -83,13 +114,13 @@ class AnisotropicSquaredExponential(Kernel):
     def kernel_function(self, x1, x2):
         """Compute the covariance matrix"""
         lam = np.eye(len(x1[0]))
-        length_scales = 1 / np.array(parameters[1:-1])
+        length_scales = 1 / np.array(self.parameters[1:-1])
         np.fill_diagonal(lam, length_scales)
         x1 = np.dot(x1, lam)
         x2 = np.dot(x2, lam)
         sqdist = cdist(x1, x2, metric = 'sqeuclidean').T
-        cov = params[0]**2 * np.exp(-0.5 * sqdist)
-        noise = params[-1]**2 * np.eye(x1.shape[0])
+        cov = self.parameters[0]**2 * np.exp(-0.5 * sqdist)
+        noise = self.parameters[-1]**2 * np.eye(x1.shape[0])
         return cov + noise
 
     def kernel_gradient(self, x1, x2):
@@ -97,13 +128,29 @@ class AnisotropicSquaredExponential(Kernel):
         k = self.kernel_function(x1, x2)
         g = [cdist(np.expand_dims(x1[:,i], -1), #np.newaxis?
                    np.expand_dims(x2[:,i], -1), 
-                   metric = 'sqeuclidian'
-                   ) / params[i+1]
+                   metric = 'sqeuclidean'
+                   ) / self.parameters[i+1]
              for i in range(x1.shape[1])
              ]
-        gradients = ([2 * params[0] * k]
+        gradients = ([2 * self.parameters[0] * k]
                      + [np.multiply(g[i], k) for i in range(x1.shape[1])]
-                     + [2 * params[-1] * np.eye(x1.shape[0])]
+                     + [2 * self.parameters[-1] * np.eye(x1.shape[0])]
                      )
         return gradients
-        
+
+
+if __name__ == '__main__':
+    p = [1., 1., 1., 1.]
+    rng = np.random.default_rng()
+    x_1 = rng.standard_normal((10,2))
+    x_2 = rng.standard_normal((10,2))
+
+    sqe = SquaredExponential(p)
+    k, g = sqe(x_1, x_2, grad = True)
+    
+    asqe = AnisotropicSquaredExponential(p)
+    ak, ag = asqe(x_1, x_2, grad = True)
+
+    test = sqe + asqe
+    tk, tg = test(x_1, x_2, grad = True)
+    print(tk, tg)
