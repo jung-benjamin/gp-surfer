@@ -18,7 +18,7 @@ class Kernel(ABC):
     def __init__(self, parameters):
         """Initialize the kernel with parameter values
 
-        The list entry of parameters should be the noise
+        The last entry of parameters should be the noise
         that is added to the kernel function.
 
         Parameters
