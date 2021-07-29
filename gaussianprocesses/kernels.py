@@ -1,4 +1,4 @@
-#/ /usr/bin/env python3
+#! /usr/bin/env python3
 
 """Kernel objects for gaussian process regression
 
@@ -139,18 +139,4 @@ class AnisotropicSquaredExponential(Kernel):
         return gradients
 
 
-if __name__ == '__main__':
-    p = [1., 1., 1., 1.]
-    rng = np.random.default_rng()
-    x_1 = rng.standard_normal((10,2))
-    x_2 = rng.standard_normal((10,2))
 
-    sqe = SquaredExponential(p)
-    k, g = sqe(x_1, x_2, grad = True)
-    
-    asqe = AnisotropicSquaredExponential(p)
-    ak, ag = asqe(x_1, x_2, grad = True)
-
-    test = sqe + asqe
-    tk, tg = test(x_1, x_2, grad = True)
-    print(tk, tg)
