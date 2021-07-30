@@ -31,8 +31,32 @@ class GaussianProcessRegression():
             kernel object
         """
         self.kernel = kernel
-        self.x_train = x_data
-        self.y_train = y_data
+        self.x_train = np.array(x_data)
+        self.y_train = np.array(y_data)
+        self.x_test = None
+        self.y_test = None
+        
+    def split_data(self, idx_train):
+        """Split the data into training and test set
+        
+        Parameters
+        ----------
+        idx_train
+            tuple int, start and stop indices to indicate the
+            training set
+        """
+        ## different options to split data could be added
+        ## also consider using some sort of validation during 
+        ## optimization?
+        ## or kfold cross-validation
+        x_train = self.x_train[idx_train[0]:idx_train[1], :]
+        y_train = self.y_train[idx_train[0]:idx_train[1]]
+        x_test = np.concatenate([self.x_train[:idx_train[0],:], self.x_train[idx_train[1]:,:]], axis = 0)
+        y_test = np.concatenate([self.y_train[:idx_train[0]], self.y_train[idx_train[1]:]], axis = 0)
+        self.x_train = x_train
+        self.y_train = y_train
+        self.x_test = x_test
+        self.y_test = y_test
         
     def posterior_predictive(self, x_test):
         '''Compute statistics of the posterior predictive distribution
@@ -53,8 +77,8 @@ class GaussianProcessRegression():
             cov
                 covariance matrix (n x n).
         '''
-        k = self.kernel(self.x_train, self.x_train, grad=False)
-        k_test =  self.kernel(self.x_train, x_test, grad=False)
+        K = self.kernel(self.x_train, self.x_train, grad=False)
+        K_s =  self.kernel(self.x_train, x_test, grad=False)
 
 
         L_ = linalg.cholesky(K, lower=True)
@@ -159,7 +183,7 @@ class GaussianProcessRegression():
             y_test = []
         else:
             x_test = np.concatenate([self.x_train[:split[0],:], self.x_train[split[1]:,:]], axis = 0)
-            y_test = np.concatenate([self.y_train[:split[0],:], self.y_train[split[1]:,:]], axis = 0)
+            y_test = np.concatenate([self.y_train[:split[0]], self.y_train[split[1]:]], axis = 0)
         
         kernel = self.kernel
         initial_params = kernel.parameters
@@ -181,8 +205,6 @@ class GaussianProcessRegression():
             opt_results.append([res[0],res[1]])
         
         opt_results = np.array(opt_results)
-        print('-'*10)
-        print(opt_results)
         min_idx = np.argmin(opt_results[:, 1])
 
         print('Loglikelihood = {} \n'.format(np.exp(opt_results[min_idx, 1])))

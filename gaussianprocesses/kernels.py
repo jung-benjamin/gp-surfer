@@ -31,7 +31,7 @@ class Kernel(ABC):
     def __call__(self, x1, x2, grad=False):
         """Construct the covariance matrix
 
-        Apply the kernel function to x1 and x1.
+        Apply the kernel function to x1 and x2.
         Optionally compute the gradient as well.
         """
         if grad:
