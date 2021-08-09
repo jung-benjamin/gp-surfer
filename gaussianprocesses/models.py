@@ -80,7 +80,6 @@ class GaussianProcessRegression():
         K = self.kernel(self.x_train, self.x_train, grad=False)
         K_s =  self.kernel(self.x_train, x_test, grad=False)
 
-
         L_ = linalg.cholesky(K, lower=True)
         try:
             alpha_ = linalg.cho_solve((L_,True), self.y_train)
@@ -126,8 +125,8 @@ class GaussianProcessRegression():
         # in http://www.gaussianprocess.org/gpm/chapters/RW2.pdf, Section
         # 2.2, Algorithm 2.1.
         self.kernel.parameters = theta
-        x_train = self.x_train[split[0]:split[1], :]
-        y_train = self.y_train[split[0]:split[1]]
+        x_train = self.x_train#[split[0]:split[1], :]
+        y_train = self.y_train#[split[0]:split[1]]
         K, dK = self.kernel(x_train, x_train, grad = True) 
         try:
             L = linalg.cholesky(K, lower=True)
@@ -154,7 +153,7 @@ class GaussianProcessRegression():
             # In case K is not positive semidefinite
             return np.inf,np.array([np.inf for i in range(theta.shape[0])])
         
-    def optimize(self, n_steps=1, split=(None, None)):
+    def optimize(self, n_steps=1):
         """Optimize the hyperparameters of the kernel
         
         Optimize the kernel hyperparameters and optionally
@@ -175,30 +174,17 @@ class GaussianProcessRegression():
         ------
         ????
         """
+        n_params = len(self.kernel.parameters)
         
-        x_train = self.x_train[split[0]:split[1], :]
-        y_train = self.y_train[split[0]:split[1]]
-        if len(y_train) == len(self.y_train):
-            x_test = []
-            y_test = []
-        else:
-            x_test = np.concatenate([self.x_train[:split[0],:], self.x_train[split[1]:,:]], axis = 0)
-            y_test = np.concatenate([self.y_train[:split[0]], self.y_train[split[1]:]], axis = 0)
-        
-        kernel = self.kernel
-        initial_params = kernel.parameters
-        n_params = len(initial_params)
-        
-        def obj_func(theta, start, stop):
+        def obj_func(theta):
             """Objective function for the optimizer"""
-            return self.log_marginal_likelihood(theta, split = (start, stop))
+            return self.log_marginal_likelihood(theta)
         
         opt_results = []
         for i in range(n_steps):
             res = fmin_l_bfgs_b(obj_func,
                                 np.random.random(n_params),
                                 fprime=None,
-                                args = (split),
                                 bounds=[(0,np.inf) for j in range(n_params-1)] +\
                                        [(1e-12,1e-10)]
                                )
@@ -210,4 +196,23 @@ class GaussianProcessRegression():
         print('Loglikelihood = {} \n'.format(np.exp(opt_results[min_idx, 1])))
         print('Hyperparameters = \n {} \n'.format(opt_results[min_idx, 0]))
 
-        best_params = opt_results[min_idx, 0]
+        optimized_params = opt_results[min_idx, 0]
+        self.kernel.parameters = optimized_params
+        
+    def compute_alpha(self):
+        """Compute the alpha of the kernel with the training data"""
+        K = self.kernel(self.x_train, self.x_train, grad = False)
+        L_ = linalg.cholesky(K, lower=True)
+        try:
+            alpha_ = linalg.cho_solve((L_,True), self.y_train)
+        except ValueError:
+            return 0
+        return alpha_
+
+    def compute_kernel_inverse(self):
+        """Compute inverse of the kernel matrix with the training data"""
+        K = self.kernel(self.x_train, self.x_train, grad = False)
+        L_ = linalg.cholesky(K, lower=True)
+        L_inv = linalg.solve_triangular(L_.T, np.eye(L_.shape[0]))
+        K_inv = L_inv.dot(L_inv.T)
+        return K_inv
