@@ -110,12 +110,21 @@ class SquaredExponential(Kernel):
 
 class AnisotropicSquaredExponential(Kernel):
     """An anisotropic squared exponential kernel"""
-
+    
+    def __init__(self, parameters):
+        """Initialize the kernel with parameters"""
+        Kernel.__init__(self, parameters)
+        self.lambda_ = None
+        
     def kernel_function(self, x1, x2):
         """Compute the covariance matrix"""
-        lam = np.eye(len(x1[0]))
-        length_scales = 1 / np.array(self.parameters[1:-1])
-        np.fill_diagonal(lam, length_scales)
+#         lam = np.eye(len(x1[0]))
+#         length_scales = 1 / np.array(self.parameters[1:-1])
+#         np.fill_diagonal(lam, length_scales)
+        if self.lambda_ is None:
+            lam = self.create_lambda(x1)
+        else:
+            lam = self.lambda_
         x1 = np.dot(x1, lam)
         x2 = np.dot(x2, lam)
         sqdist = cdist(x1, x2, metric = 'sqeuclidean').T
@@ -137,6 +146,15 @@ class AnisotropicSquaredExponential(Kernel):
                      + [2 * self.parameters[-1] * np.eye(x1.shape[0])]
                      )
         return gradients
+    
+    def create_lambda(self, x1):
+        """Calculate the matrix with lengthscales for the kernel"""
+        lam = np.eye(len(x1[0]))
+        length_scales = 1 / np.array(self.parameters[1:-1])
+        np.fill_diagonal(lam, length_scales)
+        self.lambda_ = lam
+        return lam
+        
 
 
 
