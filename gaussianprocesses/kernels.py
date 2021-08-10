@@ -61,6 +61,9 @@ class Combination(Kernel):
 
     def __init__(self, kernels):
         self.kernel_list = kernels
+        self.parameters = []
+        for k in self.kernel_list:
+            self.parameters += k.parameters
 
     @abstractmethod
     def _combine_function(self):
