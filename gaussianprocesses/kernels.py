@@ -194,3 +194,47 @@ class AnisotropicSquaredExponential(Kernel):
         return lam
         
 
+class Linear(Kernel):
+    """A linear kernel"""
+
+    def __init__(self, parameters):
+        """Initialize the kernel with parameters"""
+        Kernel.__init__(self, parameters)
+        self.lambda_ = None
+        
+    def kernel_function(self, x1, x2):
+        """Compute the covariance matrix"""
+        if self.lambda_ is None:
+            lam = self.create_lambda(x1)
+        else:
+            lam = self.lambda_
+        x1 = np.dot(x1, lam)
+        x2 = np.dot(x2, lam)
+        cov = (self.parameters[0] * np.dot(x1, x2.T).T
+               + self.parameters[1]
+               + self.parameters[-1]**2 * np.eye(x1.shape[0])
+               )
+        return cov
+
+    def kernel_gradient(self, x1, x2):
+        """Compute the gradient of the covariance matrix"""
+        k = self.kernel_function(x1, x2)
+        g = [np.dot(x1, x2.T).T] + [
+             np.eye(k.shape[0])] + [
+             (2 * self.parameters[0] * np.dot(np.expand_dims(x1[:,i],-1),
+                                       np.expand_dims(x2[:,i],-1).T).T
+              / self.parameters[i]
+              )
+             for i in range(x1.shape[1])
+             ]
+        gradients = g + [2 * self.parameters[-1] * np.eye(x1.shape[0])] 
+        return gradients
+
+    def create_lambda(self, x1):
+        """Calculate the matrix with lengthscales for the kernel"""
+        lam = np.eye(len(x1[0]))
+        length_scales = 1 / np.array(self.parameters[1:-1])
+        np.fill_diagonal(lam, length_scales)
+        self.lambda_ = lam
+        return lam
+
