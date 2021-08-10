@@ -52,6 +52,9 @@ class Kernel(ABC):
     def __add__(self, other):
         return Sum([self, other])
 
+    def __mul__(self, other):
+        return Product([self, other])
+
 
 class Combination(Kernel):
     """Combine a list of kernels"""
@@ -60,25 +63,60 @@ class Combination(Kernel):
         self.kernel_list = kernels
 
     @abstractmethod
-    def _combine(self):
+    def _combine_function(self):
         """Method to combine the kernel functions"""
         pass
 
+    @abstractmethod
+    def _combine_gradient(self):
+        """Method to combine the kernel gradients"""
+        pass
+
     def kernel_function(self, x1, x2):
-        return self._combine([k.kernel_function(x1, x2) for k in self.kernel_list])
+        return self._combine_function([k.kernel_function(x1, x2) for k in self.kernel_list])
 
     def kernel_gradient(self, x1, x2):
-        return self._combine([k.kernel_gradient(x1, x2) for k in self.kernel_list])
+        return self._combine_gradient([k.kernel_function(x1, x2) for k in self.kernel_list],
+                                      [k.kernel_gradient(x1, x2) for k in self.kernel_list]
+                                      )
 
 
 class Sum(Combination):
     """Calculate the sum of kernels"""
 
-    def _combine(self, l):
+    def _combine_function(self, l):
         s = l[0]
         for elem in l[1:]:
             s = s + elem
         return s
+
+    def _combine_gradient(self, l, g):
+        s = g[0]
+        for elem in g[1:]:
+            s = s + elem
+        return s
+
+
+class Product(Combination):
+    """Calculate the product of kernels"""
+
+    def _combine_function(self, l):
+        p = l[0]
+        for elem in l[1:]:
+            p = p * elem
+        return p
+
+    def _combine_gradient(self, l, g):
+        p = []
+        for i, grad in enumerate(g):
+            k = l.copy()
+            k.pop(i)
+            p_kernels = k[0]
+            for elem in k[1:]:
+                p_kernels = p_kernels * elem
+            p_grad = [p_kernels * grad_elem for grad_elem in grad]
+            p += p_grad
+        return p
 
 
 class SquaredExponential(Kernel):
@@ -155,6 +193,4 @@ class AnisotropicSquaredExponential(Kernel):
         self.lambda_ = lam
         return lam
         
-
-
 

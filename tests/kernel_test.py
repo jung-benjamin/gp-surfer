@@ -25,13 +25,73 @@ def test_asqe_kernel_shape():
     k = asqe(x1, x2, grad = False)
     assert k.shape == (10, 10)
 
-def test_sqe_asqe_kernel_sum():
+def test_sqe_gradient_length():
+    p, x1, x2 = create_kernel_input()
+    sqe = kernels.SquaredExponential(p)
+    k, g = sqe(x1, x2, grad = True)
+    assert len(g) == len(sqe.parameters)
+
+def test_asqe_gradient_length():
+    p, x1, x2 = create_kernel_input()
+    asqe = kernels.AnisotropicSquaredExponential(p)
+    k, g = asqe(x1, x2, grad = True)
+    assert len(g) == len(asqe.parameters)
+
+def test_sqe_asqe_kernel_sum_shape():
     p, x1, x2 = create_kernel_input()
     sqe = kernels.SquaredExponential(p)
     asqe = kernels.AnisotropicSquaredExponential(p)
     sum_k = sqe + asqe
     k = sum_k(x1, x2, grad = False)
     assert k.shape == (10, 10)
+
+def test_sqe_asqe_kernel_sum_value():
+    p, x1, x2 = create_kernel_input()
+    sqe = kernels.SquaredExponential(p)
+    asqe = kernels.AnisotropicSquaredExponential(p)
+    sum_k = sqe + asqe
+    k = sum_k(x1, x2, grad = False)
+    k1 = sqe(x1, x2, grad = False)
+    k2 = asqe(x1, x2, grad = False)
+    assert np.all(k == k1 + k2)
+
+def test_sqe_asqe_kernel_product_shape():
+    p, x1, x2 = create_kernel_input()
+    sqe = kernels.SquaredExponential(p)
+    asqe = kernels.AnisotropicSquaredExponential(p)
+    sum_k = sqe * asqe
+    k = sum_k(x1, x2, grad = False)
+    assert k.shape == (10, 10)
+
+def test_sqe_asqe_kernel_product_value():
+    p, x1, x2 = create_kernel_input()
+    sqe = kernels.SquaredExponential(p)
+    asqe = kernels.AnisotropicSquaredExponential(p)
+    sum_k = sqe * asqe
+    k = sum_k(x1, x2, grad = False)
+    k1 = sqe(x1, x2, grad = False)
+    k2 = asqe(x1, x2, grad = False)
+    assert np.all(k == k1 * k2)
+
+def test_sqe_asqe_gradient_sum_length():
+    p, x1, x2 = create_kernel_input()
+    sqe = kernels.SquaredExponential(p)
+    asqe = kernels.AnisotropicSquaredExponential(p)
+    sum_k = sqe + asqe
+    k, g = sum_k(x1, x2, grad = True)
+    k1, g1 = sqe(x1, x2, grad = True)
+    k2, g2 = asqe(x1, x2, grad = True)
+    assert len(g) == (len(g1) + len(g2))
+
+def test_sqe_asqe_gradient_product_length():
+    p, x1, x2 = create_kernel_input()
+    sqe = kernels.SquaredExponential(p)
+    asqe = kernels.AnisotropicSquaredExponential(p)
+    prod_k = sqe * asqe
+    k, g = prod_k(x1, x2, grad = True)
+    k1, g1 = sqe(x1, x2, grad = True)
+    k2, g2 = asqe(x1, x2, grad = True)
+    assert len(g) == (len(g1) + len(g2))
 
 # sqe = kernels.SquaredExponential(p)
 # k, g = sqe(x_1, x_2, grad = True)
