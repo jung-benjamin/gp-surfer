@@ -15,7 +15,7 @@ from scipy.spatial.distance import cdist
 class Kernel(ABC):
     """Abstract base class for a GPR kernel."""
 
-    def __init__(self, parameters):
+    def __init__(self, parameters, bounds=None):
         """Initialize the kernel with parameter values
 
         The last entry of parameters should be the noise
@@ -25,8 +25,19 @@ class Kernel(ABC):
         ----------
         parameters
             array like, floats
+            hyperparameters of the kernel
+        bounds
+            list of tuples (floats),
+            bounds for each hyperparameter
         """
         self.parameters = parameters
+        if bounds is None:
+            self.bounds = [(0, np.inf) for i in range(len(parameters[:-1]))]
+            # the last parameter should be the noise parameter and 
+            # needs to be limited more
+            self.bounds.append((1e-12, 1e-10))
+        else:
+            self.bounds = bounds
 
     def __call__(self, x1, x2, grad=False):
         """Construct the covariance matrix
@@ -60,10 +71,13 @@ class Combination(Kernel):
     """Combine a list of kernels"""
 
     def __init__(self, kernels):
+        """Join parameters and bounds of the kernels""" 
         self.kernel_list = kernels
         self.parameters = []
+        self.bounds = []
         for k in self.kernel_list:
             self.parameters += k.parameters
+            self.bounds += k.bounds
 
     @abstractmethod
     def _combine_function(self):
@@ -152,9 +166,9 @@ class SquaredExponential(Kernel):
 class AnisotropicSquaredExponential(Kernel):
     """An anisotropic squared exponential kernel"""
     
-    def __init__(self, parameters):
+    def __init__(self, *args, **kwargs):
         """Initialize the kernel with parameters"""
-        Kernel.__init__(self, parameters)
+        Kernel.__init__(self, *args, **kwargs)
         self.lambda_ = None
         
     def kernel_function(self, x1, x2):

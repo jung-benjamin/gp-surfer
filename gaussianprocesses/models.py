@@ -184,9 +184,8 @@ class GaussianProcessRegression():
         for i in range(n_steps):
             res = fmin_l_bfgs_b(obj_func,
                                 np.random.random(n_params),
-                                fprime=None,
-                                bounds=[(0,np.inf) for j in range(n_params-1)] +\
-                                       [(1e-12,1e-10)]
+                                fprime = None,
+                                bounds = self.kernel.bounds,
                                )
             opt_results.append([res[0],res[1]])
         
