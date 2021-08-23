@@ -72,10 +72,10 @@ class GaussianProcessRegression():
             
         Output
         ------
-            mean
-                posterior mean vector (n x d)
-            cov
-                covariance matrix (n x n).
+        mean
+            posterior mean vector (n x d)
+        cov
+            covariance matrix (n x n).
         '''
         K = self.kernel(self.x_train, self.x_train, grad=False)
         K_s =  self.kernel(self.x_train, x_test, grad=False)
@@ -172,7 +172,8 @@ class GaussianProcessRegression():
             
         Output
         ------
-        ????
+        optimized_params
+            list, optimized hyperparameters
         """
         n_params = len(self.kernel.parameters)
         
