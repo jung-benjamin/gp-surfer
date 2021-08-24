@@ -15,7 +15,7 @@ from scipy.spatial.distance import cdist
 class Kernel(ABC):
     """Abstract base class for a GPR kernel."""
 
-    def __init__(self, parameters, bounds=None):
+    def __init__(self, parameters=None, bounds=None):
         """Initialize the kernel with parameter values
 
         The last entry of parameters should be the noise
@@ -30,8 +30,13 @@ class Kernel(ABC):
             list of tuples (floats),
             bounds for each hyperparameter
         """
-        self.parameters = parameters
-        if bounds is None:
+        if parameters is None:
+            self.parameters = []
+        else:
+            self.parameters = parameters
+        if len(self.parameters) == 0:
+            self.bounds = []
+        elif bounds is None:
             self.bounds = [(0, np.inf) for i in range(len(parameters[:-1]))]
             # the last parameter should be the noise parameter and 
             # needs to be limited more
@@ -61,10 +66,28 @@ class Kernel(ABC):
         pass
 
     def __add__(self, other):
-        return Sum([self, other])
+        if other == 0:
+            return self
+        else:
+            return Sum([self, other])
+
+    def __radd__(self, other):
+        if other == 0:
+            return self
+        else:
+            return Sum([other, self])
 
     def __mul__(self, other):
-        return Product([self, other])
+        if other == 1:
+            return self
+        else:
+            return Product([self, other])
+
+    def __rmul__(self, other):
+        if other == 1:
+            return self
+        else:
+            return Product([other, self])
 
 
 class Combination(Kernel):
@@ -78,6 +101,15 @@ class Combination(Kernel):
         for k in self.kernel_list:
             self.parameters += k.parameters
             self.bounds += k.bounds
+
+    def __str__(self):
+        """String representation of the combination of kernels"""
+        return self._combine_string()
+
+    @abstractmethod
+    def _combine_string(self):
+        """Combine the __str__ methods of the kernels"""
+        pass
 
     @abstractmethod
     def _combine_function(self):
@@ -101,6 +133,9 @@ class Combination(Kernel):
 class Sum(Combination):
     """Calculate the sum of kernels"""
 
+    def _combine_string(self):
+        return ' + '.join([str(k) for k in self.kernel_list])
+
     def _combine_function(self, l):
         s = l[0]
         for elem in l[1:]:
@@ -116,6 +151,9 @@ class Sum(Combination):
 
 class Product(Combination):
     """Calculate the product of kernels"""
+    
+    def _combine_string(self):
+        return ' * '.join([f'({str(k)})' for k in self.kernel_list])
 
     def _combine_function(self, l):
         p = l[0]
@@ -149,6 +187,14 @@ class SquaredExponential(Kernel):
         noise = self.parameters[-1]**2 * np.eye(x1.shape[0])
         return cov + noise
 
+    def __str__(self):
+        """String of the class name
+
+        This dunder method is used to combine names
+        of combinations of kernels.
+        """
+        return 'Squared Exponential Kernel'
+
     def kernel_gradient(self, x1, x2):
         """Compute the gradient of the kernel function"""
         sqdist = (np.sum(x1**2, axis = 1).reshape(-1, 1)
@@ -170,6 +216,14 @@ class AnisotropicSquaredExponential(Kernel):
         """Initialize the kernel with parameters"""
         Kernel.__init__(self, *args, **kwargs)
         self.lambda_ = None
+
+    def __str__(self):
+        """String of the class name
+
+        This dunder method is used to combine names of
+        combinations of kernel.
+        """
+        return 'Anisotropic Squared Exponential Kernel'
         
     def kernel_function(self, x1, x2):
         """Compute the covariance matrix"""
@@ -214,11 +268,19 @@ class AnisotropicSquaredExponential(Kernel):
 class Linear(Kernel):
     """A linear kernel"""
 
-    def __init__(self, parameters):
+    def __init__(self, *args, **kwargs):
         """Initialize the kernel with parameters"""
-        Kernel.__init__(self, parameters)
+        Kernel.__init__(self, *args, **kwargs)
         self.lambda_ = None
-        
+    
+    def __str__(self):
+        """String of the class name
+
+        This dunder method is used to combine names
+        of combinations of kernels.
+        """
+        return 'Linear Kernel'
+
     def kernel_function(self, x1, x2):
         """Compute the covariance matrix"""
         if self.lambda_ is None:
