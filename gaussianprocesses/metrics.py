@@ -82,3 +82,21 @@ def r_squared(pred, data):
     r_square = 1 - (ss_res / ss_tot)
     return r_square    
 
+def rmse(pred, data):
+    """Calculate the root mean squared error
+
+    Parameters
+    ----------
+    pred 
+        (nx1) array, model predictions
+    data
+        (nx1) array, data points
+
+    Returns
+    -------
+    rmse
+        float, root mean squared error
+    """
+    ss_res = sum_squares_residuals(pred, data)
+    rsme = ss_res / len(data)
+    return rsme
