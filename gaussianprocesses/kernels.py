@@ -53,8 +53,8 @@ class Kernel(ABC):
         if grad:
             return self.kernel_function(x1, x2), self.kernel_gradient(x1, x2)
         else:
-            return self.kernel_function(x1, x2)
-
+            return self.kernel_function(x1, x2)    
+        
     @abstractmethod
     def kernel_function(self, x1, x2):
         """Construct the covariance matrix"""
@@ -230,10 +230,11 @@ class AnisotropicSquaredExponential(Kernel):
 #         lam = np.eye(len(x1[0]))
 #         length_scales = 1 / np.array(self.parameters[1:-1])
 #         np.fill_diagonal(lam, length_scales)
-        if self.lambda_ is None:
-            lam = self.create_lambda(x1)
-        else:
-            lam = self.lambda_
+        #if self.lambda_ is None:
+        #    lam = self.create_lambda(x1)
+        #else:
+        #    lam = self.lambda_
+        lam = self.create_lambda(x1)
         x1 = np.dot(x1, lam)
         x2 = np.dot(x2, lam)
         sqdist = cdist(x1, x2, metric = 'sqeuclidean').T
