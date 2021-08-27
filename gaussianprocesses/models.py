@@ -9,6 +9,8 @@ hyperparameters.
 import numpy as np
 from scipy import linalg
 from scipy.optimize import fmin_l_bfgs_b
+import gaussianprocesses.metrics as metrics
+
 
 class GaussianProcessRegression():
     """A gaussian process regression model
@@ -58,7 +60,7 @@ class GaussianProcessRegression():
         self.x_test = x_test
         self.y_test = y_test
         
-    def posterior_predictive(self, x_test):
+    def posterior_predictive(self, x_test, cov=False):
         '''Compute statistics of the posterior predictive distribution
 
         Compute the conditional distribution of a subset of elements,
@@ -88,18 +90,19 @@ class GaussianProcessRegression():
         mu_s = np.dot(K_s, alpha_)
 
         """Needs to be implemented better"""
-        # This part can be commented out if a calculation of the posterior variance
-        # is not desired or needed. It doubles the calculation time
+        if cov:
+            # This part can be commented out if a calculation of the posterior variance
+            # is not desired or needed. It doubles the calculation time
+            #K_ss = kernel(X_s, X_s, Type,params[:-1]) + params[-1] * np.ones(len(X_s))
+            #L_inv = linalg.solve_triangular(L_.T,np.eye(L_.shape[0]))
+            #K_inv = L_inv.dot(L_inv.T)
+            #cov_s = K_ss - K_s.dot(K_inv).dot(K_s)
+            cov_s = 0
+            return mu_s[0], cov_s
+        else:
+            return mu_s[0]
 
-        #K_ss = kernel(X_s, X_s, Type,params[:-1]) + params[-1] * np.ones(len(X_s))
-        #L_inv = linalg.solve_triangular(L_.T,np.eye(L_.shape[0]))
-        #K_inv = L_inv.dot(L_inv.T)
-        #cov_s = K_ss - K_s.dot(K_inv).dot(K_s)
-
-        cov_s = 0
-        return mu_s[0], cov_s
-
-    def log_marginal_likelihood(self, theta, split=(None, None)):
+    def log_marginal_likelihood(self, theta,):
         """Compute the negative log marginal likelihood
         
         The negative log marginal likelihood is computed for 
@@ -216,3 +219,19 @@ class GaussianProcessRegression():
         L_inv = linalg.solve_triangular(L_.T, np.eye(L_.shape[0]))
         K_inv = L_inv.dot(L_inv.T)
         return K_inv
+        
+    def evaluate_predictions(self, metric='r_squared'):
+        """Compare model predictions to the test data
+
+        Use some metric to evaluate the deviation of 
+        the model predictions to the test data.
+        """
+        x_test = np.expand_dims(self.x_test, axis=0)
+        test_len = x_test.shape[1]
+        prediction = np.array([self.posterior_predictive(x_test[:,i,:]) 
+                               for i in range(test_len)
+                               ])
+        y_test = self.y_test
+        test_func = getattr(metrics, metric)
+        performance = test_func(prediction, y_test)
+        return performance
