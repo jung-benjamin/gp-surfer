@@ -10,7 +10,7 @@ import numpy as np
 from scipy import linalg
 from scipy.optimize import fmin_l_bfgs_b
 import gaussianprocesses.metrics as metrics
-
+import gaussianprocesses.transformations as tr
 
 class GaussianProcessRegression():
     """A gaussian process regression model
@@ -20,7 +20,7 @@ class GaussianProcessRegression():
     as well as for optimizing the hyperparameters.
     """
     
-    def __init__(self, x_data, y_data, kernel):
+    def __init__(self, x_data, y_data, kernel, **kwargs):
         """Initialize the regression model with a kernel
         
         Parameters
@@ -31,13 +31,108 @@ class GaussianProcessRegression():
             array (n x 1), training data output values
         kernel
             kernel object
+        kwargs
+            Keyword arguments for specifying the data
+            transformation. The keywork 'transformation'
+            takes precedent over 'x_trafo' and 'y_trafo'.
         """
+        arguments = {'transformation' : None,
+                     'x_trafo' : None,
+                     'y_trafo' : None,
+                     }
+        arguments.update(kwargs)
         self.kernel = kernel
         self.x_train = np.array(x_data)
         self.y_train = np.array(y_data)
         self.x_test = None
         self.y_test = None
+        if arguments['transformation'] is not None:
+            self.transformation = arguments['transformation']
+        else:
+            self.transformation = arguments
+
+    @property
+    def transformation(self):
+        """Return the transformation classes"""
+        trafo_dict = {'x_trafo' : self._x_transformation,
+                      'y_trafo' : self._y_transformation,
+                      }
+        return trafo_dict
+
+    @transformation.setter
+    def transformation(self, t):
+        """Set the transformation classes"""
+        if isinstance(t, dict):
+            self.x_transformation = t['x_trafo']
+            self.y_transformation = t['y_trafo']
+        elif t is None:
+            self._x_transformation = None 
+            self._y_transformation = None
+        else:
+            raise Exception('Transformation must be a dict or None!')
+
+    @property
+    def x_transformation(self):
+        """Return only the transformation for x data"""
+        return self._x_transformation
         
+    @x_transformation.setter
+    def x_transformation(self, xt):
+        """Set only the x data transformation"""
+        if isinstance(xt, tr.Transformation):
+            self._x_transformation = xt
+        elif isinstance(xt, str):
+            self._x_transformation = getattr(tr, xt)()
+        else:
+            self._x_transformation = None
+
+    @property
+    def y_transformation(self):
+        """Return only the transformation for y data"""
+        return self._y_transformation
+        
+    @y_transformation.setter
+    def y_transformation(self, yt):
+        """Set only the y data transformation"""
+        if isinstance(yt, tr.Transformation):
+            self._y_transformation = yt
+        elif isinstance(yt, str):
+            self._y_transformation = getattr(tr, yt)()
+        else:
+            self._y_transformation = None
+
+    def transform_x(self, x):
+        """Apply the transformation to x data"""
+        trafo = self._x_transformation
+        if trafo is None:
+            return x
+        else:
+            return trafo.transform(x)
+
+    def transform_y(self, y):
+        """Apply the transformation to the y data"""
+        trafo = self._y_transformation
+        if trafo is None:
+            return y
+        else:
+            return trafo.transform(y)
+
+    def untransform(self, x):
+        """Revert the transformation of the x data"""
+        trafo = self._x_transformation
+        if trafo is None:
+            return x
+        else:
+            return trafo.untransform(x)
+
+    def untransform_y(self, y):
+        """Revert the transformation of the y data"""
+        trafo = self._y_transformation
+        if trafo is None:
+            return y
+        else:
+            return trafo.untransform(y)
+
     def split_data(self, idx_train):
         """Split the data into training and test set
         
@@ -61,7 +156,7 @@ class GaussianProcessRegression():
         self.y_test = y_test
         
     def posterior_predictive(self, x_test, cov=False):
-        '''Compute statistics of the posterior predictive distribution
+        """Compute statistics of the posterior predictive distribution
 
         Compute the conditional distribution of a subset of elements,
         conditional on the training data.
@@ -78,9 +173,12 @@ class GaussianProcessRegression():
             posterior mean vector (n x d)
         cov
             covariance matrix (n x n).
-        '''
-        K = self.kernel(self.x_train, self.x_train, grad=False)
-        K_s =  self.kernel(self.x_train, x_test, grad=False)
+        """
+        xt = self.transform_x(self.x_train)
+        xtest = self.transform_x(x_test)
+        yt = self.transform_y(self.y_train)
+        K = self.kernel(xt, xt, grad=False)
+        K_s =  self.kernel(xt, xtest, grad=False)
 
         L_ = linalg.cholesky(K, lower=True)
         try:
@@ -128,8 +226,8 @@ class GaussianProcessRegression():
         # in http://www.gaussianprocess.org/gpm/chapters/RW2.pdf, Section
         # 2.2, Algorithm 2.1.
         self.kernel.parameters = theta
-        x_train = self.x_train#[split[0]:split[1], :]
-        y_train = self.y_train#[split[0]:split[1]]
+        x_train = self.transform_x(self.x_train)#[split[0]:split[1], :]
+        y_train = self.transform_y(self.y_train)#[split[0]:split[1]]
         K, dK = self.kernel(x_train, x_train, grad = True) 
         try:
             L = linalg.cholesky(K, lower=True)
