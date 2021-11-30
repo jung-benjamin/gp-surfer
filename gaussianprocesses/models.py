@@ -184,22 +184,23 @@ class GaussianProcessRegression():
             """Objective function for the optimizer"""
             return self.log_marginal_likelihood(theta)
         
-        opt_results = []
+        opt_position = np.zeros((n_steps, n_params))
+        opt_value = np.zeros(n_steps)
         for i in range(n_steps):
             res = fmin_l_bfgs_b(obj_func,
                                 np.random.random(n_params),
                                 fprime = None,
                                 bounds = self.kernel.bounds,
                                )
-            opt_results.append([res[0],res[1]])
+            opt_position[i] = res[0]
+            opt_value[i] = res[1]
         
-        opt_results = np.array(opt_results)
-        min_idx = np.argmin(opt_results[:, 1])
+        min_idx = opt_value.argmin()
 
-        print('Loglikelihood = {} \n'.format(np.exp(opt_results[min_idx, 1])))
-        print('Hyperparameters = \n {} \n'.format(opt_results[min_idx, 0]))
+        print('Loglikelihood = {} \n'.format(np.exp(opt_value[min_idx])))
+        print('Hyperparameters = \n {} \n'.format(opt_position[min_idx]))
 
-        optimized_params = opt_results[min_idx, 0]
+        optimized_params = opt_position[min_idx]
         self.kernel.parameters = optimized_params
         
     def compute_alpha(self):
