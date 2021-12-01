@@ -11,6 +11,7 @@ from scipy import linalg
 from scipy.optimize import fmin_l_bfgs_b
 import gaussianprocesses.metrics as metrics
 import gaussianprocesses.transformations as tr
+from gaussianprocesses.dataclass import ModelData 
 
 class GaussianProcessRegression():
     """A gaussian process regression model
@@ -20,32 +21,36 @@ class GaussianProcessRegression():
     as well as for optimizing the hyperparameters.
     """
     
-    def __init__(self, x_data, y_data, kernel, **kwargs):
+    def __init__(self, kernel, **kwargs):
         """Initialize the regression model with a kernel
         
         Parameters
         ----------
-        x_data
-            array (n x d), training data input values
-        y_data
-            array (n x 1), training data output values
-        kernel
+       kernel
             kernel object
         kwargs
-            Keyword arguments for specifying the data
-            transformation. The keywork 'transformation'
+            Keyword arguments for specifying the training,
+            testing and validation data, as well as the type
+            of transformation. The keyword 'transformation'
             takes precedent over 'x_trafo' and 'y_trafo'.
         """
-        arguments = {'transformation' : None,
+        arguments = {'x_train' : None,
+                     'y_train' : None,
+                     'x_test' : None,
+                     'y_test' : None,
+                     'x_validate' : None,
+                     'y_validate' : None,
+                     'transformation' : None,
                      'x_trafo' : None,
                      'y_trafo' : None,
                      }
         arguments.update(kwargs)
         self.kernel = kernel
-        self.x_train = np.array(x_data)
-        self.y_train = np.array(y_data)
+        self.x_train = np.array(arguments['x_train'])
+        self.y_train = np.array(arguments['y_train'])
         self.x_test = None
         self.y_test = None
+        self.data = ModelData(**arguments)
         if arguments['transformation'] is not None:
             self.transformation = arguments['transformation']
         else:
@@ -133,8 +138,15 @@ class GaussianProcessRegression():
         else:
             return trafo.untransform(y)
 
-    def split_data(self, idx_train):
-        """Split the data into training and test set
+    def split_data(self, idx_train=None, idx_val=None):
+        """Split the data into different sets
+
+        Concatenates all three data categories into one
+        array and redistributes the data to the categories
+        according to the indices.
+        If idx_train and idx_val are None, the data is split
+        into three equally long parts. The indices specified
+        for slicing should not cover overlapping intervals.
         
         Parameters
         ----------
@@ -146,15 +158,49 @@ class GaussianProcessRegression():
         ## also consider using some sort of validation during 
         ## optimization?
         ## or kfold cross-validation
-        x_train = self.x_train[idx_train[0]:idx_train[1], :]
-        y_train = self.y_train[idx_train[0]:idx_train[1]]
-        x_test = np.concatenate([self.x_train[:idx_train[0],:], self.x_train[idx_train[1]:,:]], axis = 0)
-        y_test = np.concatenate([self.y_train[:idx_train[0]], self.y_train[idx_train[1]:]], axis = 0)
-        self.x_train = x_train
-        self.y_train = y_train
-        self.x_test = x_test
-        self.y_test = y_test
-        
+        conc = self.data.concatenate()
+        if idx_train is None and idx_val is None:
+            split_x = np.array_split(conc.x)
+            split_y = np.array_split(conc.y)
+        elif idx_val is None:
+            idx1 = np.arange(*idx_train)
+            split_x = [conc.x[idx1,:]]
+            split_y = [conc.y[idx1]]
+            split_x += [np.delete(conc.x, idx1, axis=0)]
+            split_y += [np.delete(conc.y, idx1, axis=0)]
+            split_x += [None]
+            split_y += [None]
+        elif idx_train is None:
+            idx2 = np.arange(*idx_val)
+            split_x = [None]
+            split_y = [None]
+            split_x += [np.delete(conc.x, idx2, axis=0)]
+            split_y += [np.delete(conc.y, idx2, axis=0)]
+            split_x += [conc.x[idx2,:]]
+            split_y += [conc.y[idx2]]
+        else:
+            idx1 = np.arange(*idx_train)
+            idx2 = np.arange(*idx_val)
+            idx3 = np.concatenate([idx1, idx2])
+            split_x = [conc.x[idx1,:]]
+            split_y = [conc.y[idx1]]
+            split_x += [np.delete(conc.x, idx3, axis=0)]
+            split_y += [np.delete(conc.y, idx3, axis=0)]
+            split_x += [conc.x[idx2,:]]
+            split_y += [conc.y[idx2]]
+
+        #x_train = self.x_train[idx_train[0]:idx_train[1], :]
+        #y_train = self.y_train[idx_train[0]:idx_train[1]]
+        #x_test = np.concatenate([self.x_train[:idx_train[0],:], self.x_train[idx_train[1]:,:]], axis = 0)
+        #y_test = np.concatenate([self.y_train[:idx_train[0]], self.y_train[idx_train[1]:]], axis = 0)
+        #self.x_train = x_train
+        #self.y_train = y_train
+        #self.x_test = x_test
+        #self.y_test = y_test
+        self.data.train = {'x_train' : split_x[0], 'y_train' : split_y[0]}
+        self.data.test = {'x_test' : split_x[1], 'y_test' : split_y[1]}
+        self.data.validate = {'x_validate' : split_x[2], 'y_validate' : split_y[2]}
+
     def posterior_predictive(self, x_test, cov=False):
         """Compute statistics of the posterior predictive distribution
 
@@ -174,15 +220,15 @@ class GaussianProcessRegression():
         cov
             covariance matrix (n x n).
         """
-        xt = self.transform_x(self.x_train)
+        xt = self.transform_x(self.data.train.x)
         xtest = self.transform_x(x_test)
-        yt = self.transform_y(self.y_train)
+        yt = self.transform_y(self.data.train.y)
         K = self.kernel(xt, xt, grad=False)
         K_s =  self.kernel(xt, xtest, grad=False)
 
         L_ = linalg.cholesky(K, lower=True)
         try:
-            alpha_ = linalg.cho_solve((L_,True), self.y_train)
+            alpha_ = linalg.cho_solve((L_,True), self.yt)
         except ValueError:
             return 0, 0
         mu_s = np.dot(K_s, alpha_)
@@ -226,8 +272,8 @@ class GaussianProcessRegression():
         # in http://www.gaussianprocess.org/gpm/chapters/RW2.pdf, Section
         # 2.2, Algorithm 2.1.
         self.kernel.parameters = theta
-        x_train = self.transform_x(self.x_train)#[split[0]:split[1], :]
-        y_train = self.transform_y(self.y_train)#[split[0]:split[1]]
+        x_train = self.transform_x(self.data.train.x)
+        y_train = self.transform_y(self.data.train.y)
         K, dK = self.kernel(x_train, x_train, grad = True) 
         try:
             L = linalg.cholesky(K, lower=True)

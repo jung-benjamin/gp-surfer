@@ -46,14 +46,19 @@ class Data():
         self._y = y
 
 
-class ModelData()
+class ModelData():
     """Store training, validation and testing data"""
 
-    def __init__(self, xtrain, xtest, xvalidate, ytrain, ytest, yvalidate):
+    def __init__(self, **kwargs):
         """Set the data for the class"""
-        self.train = Data(xtrain, ytrain)
-        self.test = Data(xtest, ytest)
-        self.validate = Data(xvalidate, yvalidate)
+        arguments = {'x_train' : None, 'y_train' : None,
+                     'x_test' : None, 'y_test' : None,
+                     'x_validate' : None, 'y_validate' : None
+                     }
+        arguments.update(kwargs)
+        self.train = arguments
+        self.test = arguments
+        self.validate = arguments
 
     @property
     def train(self):
@@ -63,7 +68,7 @@ class ModelData()
     @train.setter
     def train(self, d):
         """Set the training data"""
-        self._train = d
+        self._train = Data(d['x_train'], d['y_train'])
 
     @property
     def test(self):
@@ -73,7 +78,7 @@ class ModelData()
     @test.setter
     def test(self, d):
         """Set the testing data"""
-        self._test = d
+        self._test = Data(d['x_test'], d['y_test'])
 
     @property
     def validate(self):
@@ -83,5 +88,15 @@ class ModelData()
     @validate.setter
     def validate(self, d):
         """Set the validation data"""
-        self._validate = d
+        self._validate = Data(d['x_validate'], d['y_validate'])
+
+    def concatenate(self):
+        """Concatenate the three categories into one Data object"""
+        conc = Data()
+        categories = [self.train, self.test, self.validate]
+        conc.x = np.concatenate([n.x for n in categories if n.x is not None], axis=0)
+        conc.y = np.concatenate([n.y for n in categories if n.y is not None], axis=0)
+        if conc.x.shape[0] != conc.y.shape[0]:
+            raise ValueError('Lengths of x and y do not match')
+        return conc
 
