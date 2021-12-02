@@ -123,7 +123,7 @@ class GaussianProcessRegression():
         else:
             return trafo.transform(y)
 
-    def untransform(self, x):
+    def untransform_x(self, x):
         """Revert the transformation of the x data"""
         trafo = self._x_transformation
         if trafo is None:
