@@ -7,6 +7,7 @@ hyperparameters.
 """
 
 import numpy as np
+import warnings
 from scipy import linalg
 from scipy.optimize import fmin_l_bfgs_b
 import gaussianprocesses.metrics as metrics
@@ -228,7 +229,7 @@ class GaussianProcessRegression():
 
         L_ = linalg.cholesky(K, lower=True)
         try:
-            alpha_ = linalg.cho_solve((L_,True), self.yt)
+            alpha_ = linalg.cho_solve((L_,True), yt)
         except ValueError:
             return 0, 0
         mu_s = np.dot(K_s, alpha_)
@@ -241,10 +242,11 @@ class GaussianProcessRegression():
             #L_inv = linalg.solve_triangular(L_.T,np.eye(L_.shape[0]))
             #K_inv = L_inv.dot(L_inv.T)
             #cov_s = K_ss - K_s.dot(K_inv).dot(K_s)
-            cov_s = 0
-            return mu_s[0], cov_s
+            raise NotImplementedError
+            #cov_s = 0
+            #return mu_s[0], cov_s
         else:
-            return mu_s[0]
+            return self.untransform_y(mu_s[0])
 
     def log_marginal_likelihood(self, theta,):
         """Compute the negative log marginal likelihood
@@ -364,19 +366,80 @@ class GaussianProcessRegression():
         L_inv = linalg.solve_triangular(L_.T, np.eye(L_.shape[0]))
         K_inv = L_inv.dot(L_inv.T)
         return K_inv
+    
+    def predictions(self, x='test', cov=False):
+        """Calculate model predictions for a set of points
+
+        Evaluates the posterior predictive for each point
+        in the given data set. Optionally, the testing or
+        validation data can be used.
+        Each datapoint is considered individually to evaluate
+        the y value given the training data. Considering all
+        datapoints only makes sense if the correlation between
+        the new datapoints is considered as well, which is 
+        not implemented here.
+
+        Parameters
+        ----------
+        x : str or np.ndarray(float), default = 'test'
+            If x is a string, it specifies either the testing
+            ('test') or validation ('validate') data set of 
+            the model. Otherwise it needs to be an array of
+            dimension (n_points, n_params).
+        cov : bool
+            If true, the posterior variance is also calculated.
         
-    def evaluate_predictions(self, metric='r_squared'):
+        Returns
+        -------
+        predictions : np.ndarray(float)
+            The model prediction for each datapoint.
+        variance : np.ndarray(float), if cov is True
+            The posterior variance of each prediction.
+        """
+        if isinstance(x, str):
+            data = getattr(self.data, x).x
+        else:
+            data = x
+        data = np.expand_dims(data, axis=1)
+        predictions = np.zeros(data.shape[0])
+        if cov:
+            raise NotImplementedError
+        else:
+            for i, d in enumerate(data):
+                predictions[i] = self.posterior_predictive(d)
+            return predictions
+
+    def evaluate_predictions(self, x='test', y='test', metric='r_squared'):
         """Compare model predictions to the test data
 
         Use some metric to evaluate the deviation of 
-        the model predictions to the test data.
+        the model predictions to a set of datapoints.
+
+        Parameters
+        ----------
+        x : str or np.ndarray(float), default = 'test'
+            If x is a string, it specifies either the testing
+            ('test') or validation ('validate') data set of 
+            the model. Otherwise it needs to be an array of
+            dimension (n_points, n_params).
+        y : str or np.ndarray(float), default = 'test'
+            Data, against which the model predictions are compared.
+            If y is a string, it specifies either the testing or
+            validation data. Otherwise, the points in y should correspond
+            to the points in x.
+        metric : str
+            Specifies a metric from the metrics module.
+
+        Returns
+        -------
+        performance : float
+            The value of the performance metric.
         """
-        x_test = np.expand_dims(self.x_test, axis=0)
-        test_len = x_test.shape[1]
-        prediction = np.array([self.posterior_predictive(x_test[:,i,:]) 
-                               for i in range(test_len)
-                               ])
-        y_test = self.y_test
+        prediction = self.predictions(x=x)
+        if isinstance(y, str):
+            compare = getattr(self.data, y).y
+            if y != x:
+                warnings.warn('X and Y data do not match.')
         test_func = getattr(metrics, metric)
-        performance = test_func(prediction, y_test)
+        performance = test_func(prediction, compare)
         return performance
