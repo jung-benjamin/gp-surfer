@@ -47,10 +47,6 @@ class GaussianProcessRegression():
                      }
         arguments.update(kwargs)
         self.kernel = kernel
-        self.x_train = np.array(arguments['x_train'])
-        self.y_train = np.array(arguments['y_train'])
-        self.x_test = None
-        self.y_test = None
         self.data = ModelData(**arguments)
         if arguments['transformation'] is not None:
             self.transformation = arguments['transformation']
