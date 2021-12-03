@@ -8,6 +8,7 @@ hyperparameters.
 
 import numpy as np
 import warnings
+import matplotlib.pyplot as plt
 from scipy import linalg
 from scipy.optimize import fmin_l_bfgs_b
 import gaussianprocesses.metrics as metrics
@@ -466,7 +467,7 @@ class GaussianProcessRegression():
             return predictions
 
     def evaluate_predictions(self, x='test', y=None, metric='r_squared'):
-        """Compare model predictions to the test data
+        """Compare model predictions to the data
 
         Use some metric to evaluate the deviation of 
         the model predictions to a set of datapoints.
@@ -502,6 +503,27 @@ class GaussianProcessRegression():
         test_func = getattr(metrics, metric)
         performance = test_func(prediction, compare)
         return performance
+        
+    def plot_predictions(self, x='test', y=None, plot_compare=True, **pltkwargs):
+        """Plot the model predictions"""
+        prediction = self.predictions(x=x)
+        if y is None:
+            compare = getattr(self.data, x).y
+        elif isinstance(y, str):
+            compare = getattr(self.data, y).y
+            if y != x:
+                warnings.warn('X and Y data do not match.')
+        if isinstance(x, str):
+            xdata = getattr(self.data, x).x
+        else:
+            xdata = x
+
+        fig, axes = plt.subplots(1, xdata.shape[1], **pltkwargs)
+        for i, ax in enumerate(axes):
+            ax.scatter(xdata[:,i], prediction, label='Prediction')
+            if plot_compare:
+                ax.scatter(xdata[:,i], compare, label='True')
+        plt.show()
 
     def store_kernel(self, path, how='npy'):
         """Store kernel with precomputed matrices
