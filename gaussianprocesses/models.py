@@ -302,7 +302,7 @@ class GaussianProcessRegression():
             # In case K is not positive semidefinite
             return np.inf,np.array([np.inf for i in range(theta.shape[0])])
         
-    def optimize(self, n_steps=1, first_params=None, seed=2021):
+    def optimize(self, n_steps=1, first_params=None, seed=2021, verbose=False):
         """Optimize the hyperparameters of the kernel
         
         Optimize the kernel hyperparameters and optionally
@@ -348,9 +348,9 @@ class GaussianProcessRegression():
             opt_value[i] = res[1]
         
         min_idx = opt_value.argmin()
-
-        print('Loglikelihood = {} \n'.format(np.exp(opt_value[min_idx])))
-        print('Hyperparameters = \n {} \n'.format(opt_position[min_idx]))
+        if verbose:
+            print('Loglikelihood = {} \n'.format(np.exp(opt_value[min_idx])))
+            print('Hyperparameters = \n {} \n'.format(opt_position[min_idx]))
 
         optimized_params = opt_position[min_idx]
         self.kernel.parameters = optimized_params
