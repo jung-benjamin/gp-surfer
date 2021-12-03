@@ -415,7 +415,7 @@ class GaussianProcessRegression():
                 predictions[i] = self.posterior_predictive(d)
             return predictions
 
-    def evaluate_predictions(self, x='test', y='test', metric='r_squared'):
+    def evaluate_predictions(self, x='test', y=None, metric='r_squared'):
         """Compare model predictions to the test data
 
         Use some metric to evaluate the deviation of 
@@ -428,9 +428,10 @@ class GaussianProcessRegression():
             ('test') or validation ('validate') data set of 
             the model. Otherwise it needs to be an array of
             dimension (n_points, n_params).
-        y : str or np.ndarray(float), default = 'test'
+        y : str or np.ndarray(float), default = None
             Data, against which the model predictions are compared.
-            If y is a string, it specifies either the testing or
+            If y is None, the y data in the Data object specified by x 
+            is used. If y is a string, it specifies either the testing or
             validation data. Otherwise, the points in y should correspond
             to the points in x.
         metric : str
@@ -442,7 +443,9 @@ class GaussianProcessRegression():
             The value of the performance metric.
         """
         prediction = self.predictions(x=x)
-        if isinstance(y, str):
+        if y is None:
+            compare = getattr(self.data, x).y
+        elif isinstance(y, str):
             compare = getattr(self.data, y).y
             if y != x:
                 warnings.warn('X and Y data do not match.')
