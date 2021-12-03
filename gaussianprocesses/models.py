@@ -402,6 +402,7 @@ class GaussianProcessRegression():
                 break
             seed += 1
         best = metrics.argmax()
+        self.kernel.parameters = parameters[best]
         if full_output:
             info = {'niter' : i+1}
             return metrics[best], parameters[best], info
@@ -409,17 +410,18 @@ class GaussianProcessRegression():
 
     def compute_alpha(self):
         """Compute the alpha of the kernel with the training data"""
-        K = self.kernel(self.x_train, self.x_train, grad = False)
+
+        K = self.kernel(self.data.train.x, self.data.train.x, grad=False)
         L_ = linalg.cholesky(K, lower=True)
         try:
-            alpha_ = linalg.cho_solve((L_,True), self.y_train)
+            alpha_ = linalg.cho_solve((L_,True), self.data.train.y)
         except ValueError:
             return 0
         return alpha_
 
     def compute_kernel_inverse(self):
         """Compute inverse of the kernel matrix with the training data"""
-        K = self.kernel(self.x_train, self.x_train, grad = False)
+        K = self.kernel(self.data.train.x, self.data.train.x, grad=False)
         L_ = linalg.cholesky(K, lower=True)
         L_inv = linalg.solve_triangular(L_.T, np.eye(L_.shape[0]))
         K_inv = L_inv.dot(L_inv.T)
@@ -504,3 +506,34 @@ class GaussianProcessRegression():
         test_func = getattr(metrics, metric)
         performance = test_func(prediction, compare)
         return performance
+
+    def store_kernel(self, path, how='npy'):
+        """Store kernel with precomputed matrices
+
+        Stores precomputed matrices for the training data 
+        and the optimized hyperparameters of the kernel.
+        This allows the kernel to be loaded with low
+        computational effort.
+
+        Parameters
+        ----------
+        path : str
+            Intended file location.
+        how : str
+            Determines the dataformat for the stored information.
+        """
+        params = self.kernel.parameters
+        try:
+            lam = self.kernel.create_lambda(self.data.train.x)
+        except AttributeError:
+            warnings.warn("Kernel has no lambda.")
+            lam = None
+        alpha = self.compute_alpha()
+        inv = self.compute_kernel_inverse()
+        if how == 'npy':
+            d = {'Params': params,
+                 'LAMBDA': lam,
+                 'alpha_': alpha,
+                 'K_inv': inv
+                 }
+            np.save(path, d)
