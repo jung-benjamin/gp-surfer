@@ -355,6 +355,58 @@ class GaussianProcessRegression():
         optimized_params = opt_position[min_idx]
         self.kernel.parameters = optimized_params
         
+    def optimize_metric(self, target, metric='r_squared', n_steps=1000,
+                        seed=2021, maxiter=100, full_output=False):
+        """Repeat hyperparameter optimization to improve metric
+
+        Repeatedly optimizes the hyperparameters and computes the
+        evaluation metric for the validation data. Selects the 
+        optimizer result with the best evaluation.
+
+        Parameters
+        ----------
+        target : float
+            If the metric is larger than target, the repetition stops.
+        metric : string
+            Identifies the evaluation metric from the metrics module.
+        n_steps : int
+            Number of steps for the optimizer method.
+        seed : int
+            Starting seed of the optimizer method. Is increased by
+            one for each repetition of the optimizer in this method.
+        maxiter : int
+            Maximum number of repetitions if the target is not met.
+        full_output : bool
+            If True, returns more information about the optimization 
+            process.
+
+        Returns
+        -------
+        metric : float
+            Value of the metric for the best result of the optimizer.
+        parameters : float
+            Model hyperparameters that produced the metric with the
+            validation data.
+        info : dict (optional)
+            Information dictionary.
+        """
+        n_params = len(self.kernel.parameters)
+        parameters = np.zeros((maxiter, n_params))
+        metrics = np.zeros(maxiter)
+        for i in range(maxiter):
+            self.optimize(n_steps=n_steps, seed=seed)
+            parameters[i] = self.kernel.parameters
+            m = self.evaluate_predictions('validate', metric=metric)
+            metrics[i] = m
+            if m > target:
+                break
+            seed += 1
+        best = metrics.argmax()
+        if full_output:
+            info = {'niter' : i+1}
+            return metrics[best], parameters[best], info
+        return metrics[best], parameters[best]
+
     def compute_alpha(self):
         """Compute the alpha of the kernel with the training data"""
         K = self.kernel(self.x_train, self.x_train, grad = False)
