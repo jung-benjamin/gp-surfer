@@ -500,8 +500,17 @@ class GaussianProcessRegression():
             compare = getattr(self.data, y).y
             if y != x:
                 warnings.warn('X and Y data do not match.')
-        test_func = getattr(metrics, metric)
-        performance = test_func(prediction, compare)
+        if isinstance(metric, list):
+            performance = {}
+            for m in metric:
+                try:
+                    test_func = getattr(metrics, m)
+                except:
+                    continue
+                performance[m] = test_func(prediction, compare)
+        else:
+            test_func = getattr(metrics, metric)
+            performance = test_func(prediction, compare)
         return performance
         
     def plot_predictions(self, x='test', y=None, plot_compare=True, **pltkwargs):
