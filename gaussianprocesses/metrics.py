@@ -100,3 +100,27 @@ def rmse(pred, data):
     ss_res = sum_squares_residuals(pred, data)
     rsme = ss_res / len(data)
     return rsme
+
+def mape(pred, data):
+    """Calculate the mean absolute percentage error
+
+    The mean absolute percentage error (MAPE) is calculated
+    by summing over the absolute differences between actual
+    and predicted value divided by the actual value. The 
+    sum is divided by the number of data points. The mape is
+    given in %.
+
+    Parameters
+    ----------
+    pred 
+        (nx1) array, model predictions
+    data
+        (nx1) array, data points
+
+    Returns
+    -------
+    mape
+        float, mean absolute percentage error
+    """
+    return ((data - pred) / data).mean() * 100
+
