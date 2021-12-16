@@ -13,6 +13,7 @@ from scipy import linalg
 from scipy.optimize import fmin_l_bfgs_b
 import gaussianprocesses.metrics as metrics
 import gaussianprocesses.transformations as tr
+import gaussianprocesses.kernels as kernels
 from gaussianprocesses.dataclass import ModelData 
 
 class GaussianProcessRegression():
@@ -28,7 +29,7 @@ class GaussianProcessRegression():
         
         Parameters
         ----------
-       kernel
+        kernel
             kernel object
         kwargs
             Keyword arguments for specifying the training,
@@ -53,6 +54,44 @@ class GaussianProcessRegression():
             self.transformation = arguments['transformation']
         else:
             self.transformation = arguments
+
+    ## This only works for kernels that are implemented as an object
+    ## Kernels that are combinations of kernels cannot be loaded
+    @classmethod
+    def from_dict(cls, d):
+        """Create instance of the model by loading a dictionary
+        
+        Parameters
+        ----------
+        d : dict
+            Dictionary containing parameters to initialize the kernel.
+
+        Returns
+        -------
+        model : GaussianProcessRegression object
+            Instance of the GaussianProcessRegression class.
+        """
+        model = GaussianProcessRegression(**d)
+        model.kernel.parameters = d['Params']
+        model.kernel_inv = d['K_inv']
+        model.alpha_ = d['alpha_']
+        model.LAMBDA = d['LAMBDA']
+        return model
+
+    @property
+    def kernel(self):
+        """Return the kernel instance"""
+        return self._kernel
+
+    @kernel.setter
+    def kernel(self, k):
+        """Set a kernel for the object"""
+        if isinstance(k, kernels.Kernel):
+            self._kernel = k
+        elif isinstance(k, str):
+            self._kernel = getattr(kernels, k)()
+        else:
+            raise Exception('Kernel must be string or kernel object!')
 
     @property
     def transformation(self):
@@ -86,6 +125,9 @@ class GaussianProcessRegression():
             self._x_transformation = xt
         elif isinstance(xt, str):
             self._x_transformation = getattr(tr, xt)()
+        elif isinstance(xt, tuple):
+            self._x_transformation = getattr(tr, xt[0])()
+            self._x_transformation.transformation_parameters = xt[1]
         else:
             self._x_transformation = None
 
@@ -101,6 +143,9 @@ class GaussianProcessRegression():
             self._y_transformation = yt
         elif isinstance(yt, str):
             self._y_transformation = getattr(tr, yt)()
+        elif isinstance(yt, tuple):
+            self._y_transformation = getattr(tr, yt[0])()
+            self._y_transformation.transformation_parameters = yt[1]
         else:
             self._y_transformation = None
 
@@ -505,7 +550,7 @@ class GaussianProcessRegression():
             for m in metric:
                 try:
                     test_func = getattr(metrics, m)
-                except:
+                except AttributeError:
                     continue
                 performance[m] = test_func(prediction, compare)
         else:
@@ -561,6 +606,13 @@ class GaussianProcessRegression():
             d = {'Params': params,
                  'LAMBDA': lam,
                  'alpha_': alpha,
-                 'K_inv': inv
+                 'K_inv': inv,
+                 'x_train': self.data.train.x,
+                 'y_train': self.data.train.y,
+                 'y_trafo': (self.y_transformation.__class__.__name__,
+                             self.y_transformation.transformation_parameters),
+                 'x_trafo': (self.x_transformation.__class__.__name__,
+                             self.x_transformation.transformation_parameters),
+                 'kernel': self.kernel.__class__.__name__,
                  }
             np.save(path, d)
