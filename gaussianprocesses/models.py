@@ -452,18 +452,20 @@ class GaussianProcessRegression():
 
     def compute_alpha(self):
         """Compute the alpha of the kernel with the training data"""
-
-        K = self.kernel(self.data.train.x, self.data.train.x, grad=False)
+        xt = self.transform_x(self.data.train.x)
+        yt = self.transform_y(self.data.train.y)
+        K = self.kernel(xt, xt, grad=False)
         L_ = linalg.cholesky(K, lower=True)
         try:
-            alpha_ = linalg.cho_solve((L_,True), self.data.train.y)
+            alpha_ = linalg.cho_solve((L_,True), yt)
         except ValueError:
             return 0
         return alpha_
 
     def compute_kernel_inverse(self):
         """Compute inverse of the kernel matrix with the training data"""
-        K = self.kernel(self.data.train.x, self.data.train.x, grad=False)
+        xt = self.transform_x(self.data.train.x)
+        K = self.kernel(xt, xt, grad=False)
         L_ = linalg.cholesky(K, lower=True)
         L_inv = linalg.solve_triangular(L_.T, np.eye(L_.shape[0]))
         K_inv = L_inv.dot(L_inv.T)
