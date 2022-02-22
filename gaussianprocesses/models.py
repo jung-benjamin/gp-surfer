@@ -14,19 +14,19 @@ from scipy.optimize import fmin_l_bfgs_b
 import gaussianprocesses.metrics as metrics
 import gaussianprocesses.transformations as tr
 import gaussianprocesses.kernels as kernels
-from gaussianprocesses.dataclass import ModelData 
+from gaussianprocesses.dataclass import ModelData
 
 class GaussianProcessRegression():
     """A gaussian process regression model
-    
+
     The model contains methods for computing the
     log likelihood and the posterior predictive function
     as well as for optimizing the hyperparameters.
     """
-    
+
     def __init__(self, kernel, **kwargs):
         """Initialize the regression model with a kernel
-        
+
         Parameters
         ----------
         kernel
@@ -60,7 +60,7 @@ class GaussianProcessRegression():
     @classmethod
     def from_dict(cls, d):
         """Create instance of the model by loading a dictionary
-        
+
         Parameters
         ----------
         d : dict
@@ -108,7 +108,7 @@ class GaussianProcessRegression():
             self.x_transformation = t['x_trafo']
             self.y_transformation = t['y_trafo']
         elif t is None:
-            self._x_transformation = None 
+            self._x_transformation = None
             self._y_transformation = None
         else:
             raise Exception('Transformation must be a dict or None!')
@@ -117,7 +117,7 @@ class GaussianProcessRegression():
     def x_transformation(self):
         """Return only the transformation for x data"""
         return self._x_transformation
-        
+
     @x_transformation.setter
     def x_transformation(self, xt):
         """Set only the x data transformation"""
@@ -135,7 +135,7 @@ class GaussianProcessRegression():
     def y_transformation(self):
         """Return only the transformation for y data"""
         return self._y_transformation
-        
+
     @y_transformation.setter
     def y_transformation(self, yt):
         """Set only the y data transformation"""
@@ -190,7 +190,7 @@ class GaussianProcessRegression():
         If idx_train and idx_val are None, the data is split
         into three equally long parts. The indices specified
         for slicing should not cover overlapping intervals.
-        
+
         Parameters
         ----------
         idx_train
@@ -198,13 +198,13 @@ class GaussianProcessRegression():
             training set
         """
         ## different options to split data could be added
-        ## also consider using some sort of validation during 
+        ## also consider using some sort of validation during
         ## optimization?
         ## or kfold cross-validation
         conc = self.data.concatenate()
         if idx_train is None and idx_val is None:
-            split_x = np.array_split(conc.x)
-            split_y = np.array_split(conc.y)
+            split_x = np.array_split(conc.x, 3)
+            split_y = np.array_split(conc.y, 3)
         elif idx_val is None:
             idx1 = np.arange(*idx_train)
             split_x = [conc.x[idx1,:]]
@@ -253,9 +253,9 @@ class GaussianProcessRegression():
         Parameters
         ----------
         x_test
-            array like, test data for which the distribution is 
+            array like, test data for which the distribution is
             evaluated
-            
+
         Output
         ------
         mean
@@ -292,10 +292,10 @@ class GaussianProcessRegression():
 
     def log_marginal_likelihood(self, theta,):
         """Compute the negative log marginal likelihood
-        
-        The negative log marginal likelihood is computed for 
+
+        The negative log marginal likelihood is computed for
         the training data with respect to the hyperparameters.
-        
+
         Parameters
         ----------
         theta
@@ -303,12 +303,12 @@ class GaussianProcessRegression():
         split
             tuple of int, split data into training and
             test set
-            
+
         Output
         ------
-        nll: 
+        nll:
             float, negative loglikelihood of model.
-        dnll: 
+        dnll:
             array of floats (1xn_params),
             gradient of the negative loglikehood w.r.t hyperparameters
         """
@@ -318,41 +318,41 @@ class GaussianProcessRegression():
         self.kernel.parameters = theta
         x_train = self.transform_x(self.data.train.x)
         y_train = self.transform_y(self.data.train.y)
-        K, dK = self.kernel(x_train, x_train, grad = True) 
+        K, dK = self.kernel(x_train, x_train, grad = True)
         try:
             L = linalg.cholesky(K, lower=True)
             L_inv = linalg.solve_triangular(L.T,np.eye(L.shape[0]))
             K_inv = L_inv.dot(L_inv.T)
-            
+
             alpha = linalg.cho_solve((L, True), y_train)
-            
-            nll = (np.sum(np.log(np.diagonal(L))) 
+
+            nll = (np.sum(np.log(np.diagonal(L)))
                    + 0.5 * np.dot(y_train.T, alpha)
                    + 0.5 * len(x_train) * np.log(2*np.pi)
                   )
-            
+
             Tr_arg = alpha.dot(alpha.T) - K_inv
-            
+
             dnll = [-0.5 * np.trace(Tr_arg.dot(dK[i]))
                     for i in range(theta.shape[0])
                    ]
             dnll = np.array(dnll)
 
             return nll, dnll
-        
+
         except (np.linalg.LinAlgError, ValueError):
             # In case K is not positive semidefinite
             return np.inf,np.array([np.inf for i in range(theta.shape[0])])
-        
+
     def optimize(self, n_steps=1, first_params=None, seed=2021, verbose=False):
         """Optimize the hyperparameters of the kernel
-        
+
         Optimize the kernel hyperparameters and optionally
-        restart the optimization with random starting 
-        values and return the best result. For optimal 
+        restart the optimization with random starting
+        values and return the best result. For optimal
         performance the data should probably be normalized
         somehow.
-        
+
         Parameters
         ----------
         n_steps
@@ -360,18 +360,18 @@ class GaussianProcessRegression():
         split
             tuple of int, split data into training and
             test set
-            
+
         Output
         ------
         optimized_params
             list, optimized hyperparameters
         """
         n_params = len(self.kernel.parameters)
-        
+
         def obj_func(theta):
             """Objective function for the optimizer"""
             return self.log_marginal_likelihood(theta)
-        
+
         opt_position = np.zeros((n_steps, n_params))
         opt_value = np.zeros(n_steps)
 
@@ -388,7 +388,7 @@ class GaussianProcessRegression():
                                )
             opt_position[i] = res[0]
             opt_value[i] = res[1]
-        
+
         min_idx = opt_value.argmin()
         if verbose:
             print('Loglikelihood = {} \n'.format(np.exp(opt_value[min_idx])))
@@ -396,13 +396,13 @@ class GaussianProcessRegression():
 
         optimized_params = opt_position[min_idx]
         self.kernel.parameters = optimized_params
-        
+
     def optimize_metric(self, target, metric='r_squared', n_steps=1000,
                         seed=2021, maxiter=100, full_output=False):
         """Repeat hyperparameter optimization to improve metric
 
         Repeatedly optimizes the hyperparameters and computes the
-        evaluation metric for the validation data. Selects the 
+        evaluation metric for the validation data. Selects the
         optimizer result with the best evaluation.
 
         Parameters
@@ -419,7 +419,7 @@ class GaussianProcessRegression():
         maxiter : int
             Maximum number of repetitions if the target is not met.
         full_output : bool
-            If True, returns more information about the optimization 
+            If True, returns more information about the optimization
             process.
 
         Returns
@@ -470,7 +470,7 @@ class GaussianProcessRegression():
         L_inv = linalg.solve_triangular(L_.T, np.eye(L_.shape[0]))
         K_inv = L_inv.dot(L_inv.T)
         return K_inv
-    
+
     def predictions(self, x='test', cov=False):
         """Calculate model predictions for a set of points
 
@@ -480,19 +480,19 @@ class GaussianProcessRegression():
         Each datapoint is considered individually to evaluate
         the y value given the training data. Considering all
         datapoints only makes sense if the correlation between
-        the new datapoints is considered as well, which is 
+        the new datapoints is considered as well, which is
         not implemented here.
 
         Parameters
         ----------
         x : str or np.ndarray(float), default = 'test'
             If x is a string, it specifies either the testing
-            ('test') or validation ('validate') data set of 
+            ('test') or validation ('validate') data set of
             the model. Otherwise it needs to be an array of
             dimension (n_points, n_params).
         cov : bool
             If true, the posterior variance is also calculated.
-        
+
         Returns
         -------
         predictions : np.ndarray(float)
@@ -516,19 +516,19 @@ class GaussianProcessRegression():
     def evaluate_predictions(self, x='test', y=None, metric='r_squared'):
         """Compare model predictions to the data
 
-        Use some metric to evaluate the deviation of 
+        Use some metric to evaluate the deviation of
         the model predictions to a set of datapoints.
 
         Parameters
         ----------
         x : str or np.ndarray(float), default = 'test'
             If x is a string, it specifies either the testing
-            ('test') or validation ('validate') data set of 
+            ('test') or validation ('validate') data set of
             the model. Otherwise it needs to be an array of
             dimension (n_points, n_params).
         y : str or np.ndarray(float), default = None
             Data, against which the model predictions are compared.
-            If y is None, the y data in the Data object specified by x 
+            If y is None, the y data in the Data object specified by x
             is used. If y is a string, it specifies either the testing or
             validation data. Otherwise, the points in y should correspond
             to the points in x.
@@ -559,7 +559,7 @@ class GaussianProcessRegression():
             test_func = getattr(metrics, metric)
             performance = test_func(prediction, compare)
         return performance
-        
+
     def plot_predictions(self, x='test', y=None, plot_compare=True, **pltkwargs):
         """Plot the model predictions"""
         prediction = self.predictions(x=x)
@@ -584,7 +584,7 @@ class GaussianProcessRegression():
     def store_kernel(self, path, how='npy'):
         """Store kernel with precomputed matrices
 
-        Stores precomputed matrices for the training data 
+        Stores precomputed matrices for the training data
         and the optimized hyperparameters of the kernel.
         This allows the kernel to be loaded with low
         computational effort.
