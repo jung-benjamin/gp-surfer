@@ -581,7 +581,7 @@ class GaussianProcessRegression():
                 ax.scatter(xdata[:,i], compare, label='True')
         plt.show()
 
-    def store_kernel(self, path, how='npy'):
+    def store_kernel(self, path, how='npy', exact_copy=False):
         """Store kernel with precomputed matrices
 
         Stores precomputed matrices for the training data
@@ -595,6 +595,9 @@ class GaussianProcessRegression():
             Intended file location.
         how : str
             Determines the dataformat for the stored information.
+        exact_copy : bool (optional, default is False)
+            If set to True, the test and validation data is also
+            stored.
         """
         params = self.kernel.parameters
         try:
@@ -617,4 +620,9 @@ class GaussianProcessRegression():
                              self.x_transformation.transformation_parameters),
                  'kernel': self.kernel.__class__.__name__,
                  }
+            if exact_copy:
+                d['x_test'] = self.data.test.x
+                d['y_test'] = self.data.test.y
+                d['x_validate'] = self.data.validate.x
+                d['y_validate'] = self.data.validate.y
             np.save(path, d)
