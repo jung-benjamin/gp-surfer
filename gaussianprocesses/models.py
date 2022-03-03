@@ -6,15 +6,24 @@ Classes for building a gpr model and optimizing the
 hyperparameters.
 """
 
+import json
 import numpy as np
 import warnings
 import matplotlib.pyplot as plt
+from json import JSONEncoder, JSONDecoder
 from scipy import linalg
 from scipy.optimize import fmin_l_bfgs_b
 import gaussianprocesses.metrics as metrics
 import gaussianprocesses.transformations as tr
 import gaussianprocesses.kernels as kernels
 from gaussianprocesses.dataclass import ModelData
+
+class NumpyArrayEncoder(JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return JSONEncoder.default(self, obj)
+
 
 class GaussianProcessRegression():
     """A gaussian process regression model
@@ -76,6 +85,33 @@ class GaussianProcessRegression():
         model.kernel_inv = d['K_inv']
         model.alpha_ = d['alpha_']
         model.LAMBDA = d['LAMBDA']
+        return model
+
+    @classmethod
+    def from_json(cls, j):
+        """Create instance of the model by loading a json file
+
+        Parameters
+        ----------
+        j : str, path-like
+            File path of the json file.
+
+        Returns
+        -------
+        model : GaussianProcessRegression object
+            Instance of the GaussianProcessRegression class.
+        """
+        with open(j, 'r') as f:
+            jdict = json.load(f)
+        d = {}
+        for n, it in jdict.items():
+            if n == 'x_trafo' or n == 'y_trafo':
+                d[n] = (it[0], np.array(it[1]))
+            elif isinstance(it, list):
+                d[n] = np.array(it)
+            else:
+                d[n] = it
+        model = cls.from_dict(d)
         return model
 
     @property
@@ -626,3 +662,24 @@ class GaussianProcessRegression():
                 d['x_validate'] = self.data.validate.x
                 d['y_validate'] = self.data.validate.y
             np.save(path, d)
+        elif how == 'json':
+            print('entering json mode')
+            d = {'Params': params,
+                 'LAMBDA': lam,
+                 'alpha_': alpha,
+                 'K_inv': inv,
+                 'x_train': self.data.train.x,
+                 'y_train': self.data.train.y,
+                 'y_trafo': (self.y_transformation.__class__.__name__,
+                             self.y_transformation.transformation_parameters),
+                 'x_trafo': (self.x_transformation.__class__.__name__,
+                             self.x_transformation.transformation_parameters),
+                 'kernel': self.kernel.__class__.__name__,
+                 }
+            if exact_copy:
+                d['x_test'] = self.data.test.x
+                d['y_test'] = self.data.test.y
+                d['x_validate'] = self.data.validate.x
+                d['y_validate'] = self.data.validate.y
+            with open(path, 'w') as sp:
+                json.dump(d, sp, cls=NumpyArrayEncoder)
