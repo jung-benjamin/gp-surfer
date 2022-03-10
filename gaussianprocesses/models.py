@@ -161,9 +161,9 @@ class GaussianProcessRegression():
             self._x_transformation = xt
         elif isinstance(xt, str):
             self._x_transformation = getattr(tr, xt)()
-        elif isinstance(xt, tuple):
+        elif isinstance(xt, tuple) or isinstance(xt, list):
             self._x_transformation = getattr(tr, xt[0])()
-            self._x_transformation.transformation_parameters = xt[1]
+            self._x_transformation.transformation_parameters = np.array(xt[1])
         else:
             self._x_transformation = None
 
@@ -179,9 +179,9 @@ class GaussianProcessRegression():
             self._y_transformation = yt
         elif isinstance(yt, str):
             self._y_transformation = getattr(tr, yt)()
-        elif isinstance(yt, tuple):
+        elif isinstance(yt, tuple) or isinstance(yt, list):
             self._y_transformation = getattr(tr, yt[0])()
-            self._y_transformation.transformation_parameters = yt[1]
+            self._y_transformation.transformation_parameters = np.array(yt[1])
         else:
             self._y_transformation = None
 
