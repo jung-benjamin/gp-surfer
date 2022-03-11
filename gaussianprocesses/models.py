@@ -1,4 +1,4 @@
-#/ /usr/bin/env python3
+#! /usr/bin/env python3
 
 """Gaussian process regression model classes
 
@@ -10,15 +10,19 @@ import json
 import numpy as np
 import warnings
 import matplotlib.pyplot as plt
+
 from json import JSONEncoder, JSONDecoder
 from scipy import linalg
 from scipy.optimize import fmin_l_bfgs_b
+
 import gaussianprocesses.metrics as metrics
 import gaussianprocesses.transformations as tr
 import gaussianprocesses.kernels as kernels
 from gaussianprocesses.dataclass import ModelData
 
+
 class NumpyArrayEncoder(JSONEncoder):
+    """JSONEncoder that supports numpy arrays."""
     def default(self, obj):
         if isinstance(obj, np.ndarray):
             return obj.tolist()
@@ -267,15 +271,6 @@ class GaussianProcessRegression():
             split_y += [np.delete(conc.y, idx3, axis=0)]
             split_x += [conc.x[idx2,:]]
             split_y += [conc.y[idx2]]
-
-        #x_train = self.x_train[idx_train[0]:idx_train[1], :]
-        #y_train = self.y_train[idx_train[0]:idx_train[1]]
-        #x_test = np.concatenate([self.x_train[:idx_train[0],:], self.x_train[idx_train[1]:,:]], axis = 0)
-        #y_test = np.concatenate([self.y_train[:idx_train[0]], self.y_train[idx_train[1]:]], axis = 0)
-        #self.x_train = x_train
-        #self.y_train = y_train
-        #self.x_test = x_test
-        #self.y_test = y_test
         self.data.train = {'x_train' : split_x[0], 'y_train' : split_y[0]}
         self.data.test = {'x_test' : split_x[1], 'y_test' : split_y[1]}
         self.data.validate = {'x_validate' : split_x[2], 'y_validate' : split_y[2]}
@@ -663,7 +658,6 @@ class GaussianProcessRegression():
                 d['y_validate'] = self.data.validate.y
             np.save(path, d)
         elif how == 'json':
-            print('entering json mode')
             d = {'Params': params,
                  'LAMBDA': lam,
                  'alpha_': alpha,
