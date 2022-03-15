@@ -3,6 +3,7 @@
 """Classes for storing the data of the GPR model"""
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 class Data():
     """Store x and y data for the GPR model"""
@@ -15,11 +16,11 @@ class Data():
         Parameters
         ----------
         xdata : np.ndarray, floats, (N x D)
-            Input data for a gpr model. N is the number of 
+            Input data for a gpr model. N is the number of
             points in the data, and D is the length of each
             data point.
         ydata : np.ndarray, floats, (N)
-            Output data for the gpr model, N is the number of 
+            Output data for the gpr model, N is the number of
             data points.
         """
         self.x = xdata
@@ -44,6 +45,28 @@ class Data():
     def y(self, y):
         """Set the y data"""
         self._y = y
+
+    def plot(self, show=True, **pltkwargs):
+        """Create scatterplots of the data
+
+        Automatically adjusts the number of subplots
+        according to the dimensions of the x-data.
+        Tries to keep the plot close to a square shape.
+
+        Parameters
+        ----------
+        pltkwargs
+            Keyword arguments for matplotlib subplots.
+        """
+        dim = self.x.shape[1]
+        num_ax = (int(np.round(np.sqrt(dim))), int(np.ceil(np.sqrt(dim))))
+        fig, axes = plt.subplots(*num_ax, **pltkwargs)
+        for i, ax in enumerate(axes.flatten()):
+            ax.scatter(self.x[:,i], self.y)
+        if show:
+            plt.show()
+        else:
+            plt.close()
 
 
 class ModelData():
@@ -100,3 +123,17 @@ class ModelData():
             raise ValueError('Lengths of x and y do not match')
         return conc
 
+    def plot(self, dataset, show=True):
+        """Create scatterplots a dataset
+
+        Plots either the training, validation or test data.
+
+        Parameters
+        ----------
+        dataset : str
+            Determine which dataset to plot. Either 'train',
+            'test' or 'validate'.
+        """
+        data = getattr(self, dataset)
+        print(data)
+        data.plot(show)
