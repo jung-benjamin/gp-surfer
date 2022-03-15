@@ -299,12 +299,14 @@ class GaussianProcessRegression():
         yt = self.transform_y(self.data.train.y)
         K = self.kernel(xt, xt, grad=False)
         K_s =  self.kernel(xt, xtest, grad=False)
-
         L_ = linalg.cholesky(K, lower=True)
+        ## This try an except may cause errors to go unnoticed.
         try:
             alpha_ = linalg.cho_solve((L_,True), yt)
         except ValueError:
-            return 0, 0
+            if cov:
+                return 0, 0
+            return 0
         mu_s = np.dot(K_s, alpha_)
 
         """Needs to be implemented better"""
