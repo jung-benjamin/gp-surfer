@@ -679,3 +679,67 @@ class GaussianProcessRegression():
                 d['y_validate'] = self.data.validate.y
             with open(path, 'w') as sp:
                 json.dump(d, sp, cls=NumpyArrayEncoder)
+
+
+class GPRQuotient():
+    """Calculate the quotient of two GPR model predictions
+
+    This composite class of two GaussianProcessRegression classes
+    evaluates the predictions of two trained models an calcualtes
+    the quotient.
+    """
+
+    def __init__(self, mi, mj):
+        """Set the composite classes
+
+        Parameters
+        ----------
+        mi, mj : GaussianProcessRegression
+            GPR models that comprise the quotient.
+        """
+        self.mi = mi
+        self.mj = mj
+
+    @classmethod
+    def from_json(cls, fi, fj):
+        """Instantiate the class from json files
+
+        Parameters
+        ----------
+        f1, f2 : str, path-like
+            Filepaths to files that contain all parameters of
+            the two comprising classes.
+
+        Returns
+        -------
+        quotient : GPRQuotient
+            The composite class.
+        """
+        mi = GaussianProcessRegression.from_json(fi)
+        mj = GaussianProcessRegression.from_json(fj)
+        quotient = cls(mi, mj)
+        return quotient
+
+    def predictions(self, x, inv=False):
+        """Calculate the quotient of the predictions
+
+        Parameters
+        ----------
+        x : array of floats
+            Data for which the predictions are calculated.
+            Both comprising models are evaluated at the same
+            data points.
+        inf : bool, optional (default is False)
+            If bool is True, then the inverse of the quotien is
+            returned, i.e. mj / mi, instead of mi / mj.
+
+        Returns
+        pred : array of floats
+            Quotient of the predictions of the comprising classes.
+        """
+        pi = self.mi.predictions(x=x)
+        pj = self.mj.predictions(x=x)
+        quotient = pi / pj
+        if inv:
+            return 1 / quotient
+        return quotient
