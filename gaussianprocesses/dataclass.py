@@ -55,13 +55,16 @@ class Data():
 
         Parameters
         ----------
+        show : bool, optional (default is True)
+            If True, calls plt.show(). Otherwise, plt.close()
+            is called.
         pltkwargs
             Keyword arguments for matplotlib subplots.
         """
         dim = self.x.shape[1]
         num_ax = (int(np.round(np.sqrt(dim))), int(np.ceil(np.sqrt(dim))))
         fig, axes = plt.subplots(*num_ax, **pltkwargs)
-        for i, ax in enumerate(axes.flatten()):
+        for i, ax in zip(range(dim), axes.flatten()):
             ax.scatter(self.x[:,i], self.y)
         if show:
             plt.show()
