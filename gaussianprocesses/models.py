@@ -309,17 +309,11 @@ class GaussianProcessRegression():
             return 0
         mu_s = np.dot(K_s, alpha_)
 
-        """Needs to be implemented better"""
         if cov:
-            # This part can be commented out if a calculation of the posterior variance
-            # is not desired or needed. It doubles the calculation time
-            #K_ss = kernel(X_s, X_s, Type,params[:-1]) + params[-1] * np.ones(len(X_s))
-            #L_inv = linalg.solve_triangular(L_.T,np.eye(L_.shape[0]))
-            #K_inv = L_inv.dot(L_inv.T)
-            #cov_s = K_ss - K_s.dot(K_inv).dot(K_s)
-            raise NotImplementedError
-            #cov_s = 0
-            #return mu_s[0], cov_s
+            K_ss = self.kernel(xtest, xtest, grad=False)
+            K_inv = self.compute_kernel_inverse()
+            cov_s = K_ss - K_s.dot(K_inv).dot(K_s)
+            return self.untransform_y(mu_s[0]), cov_s
         else:
             return self.untransform_y(mu_s[0])
 
@@ -540,7 +534,12 @@ class GaussianProcessRegression():
         data = np.expand_dims(data, axis=1)
         predictions = np.zeros(data.shape[0])
         if cov:
-            raise NotImplementedError
+            covariance = []
+            for i, d in enumerate(data):
+                p, c = self.posterior_predictive(d, cov)
+                predictions[i] = p
+                covariance.append(c)
+            return predictions, np.array(covariance)
         else:
             for i, d in enumerate(data):
                 predictions[i] = self.posterior_predictive(d)

@@ -13,6 +13,16 @@ def create_data():
     y_1 = rng.standard_normal((10,1))
     return p, x_1, y_1
 
+def create_point():
+    """Create a test point for evaluating a model."""
+    x_point = np.array([[2, 2]])
+    return x_point
+
+def create_points():
+    """Create array of test points for evaluating a model."""
+    x_points = np.array([[1, 1], [2, 2], [3, 3]])
+    return x_points
+
 def create_model():
     """Create a GPR model for tests"""
     p, x_1, y_1 = create_data()
@@ -24,6 +34,22 @@ def create_model():
                                            transformation=trafo,
                                            )
     return gpr
+
+def test_posterior_predictive():
+    """Test the posterior predictive method of the GPR class"""
+    m = create_model()
+    p = create_point()
+    m.posterior_predictive(p)
+    m.posterior_predictive(p, cov=True)
+    assert True
+
+def test_predictions():
+    """Test the predictions method of the GPR class"""
+    m = create_model()
+    p = create_points()
+    m.predictions(p)
+    m.predictions(p, cov=True)
+    assert True
 
 def test_model_optimize():
     """Test optimize method of the GPR class"""
