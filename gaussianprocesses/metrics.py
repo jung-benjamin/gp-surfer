@@ -38,7 +38,7 @@ def sum_squares_residuals(pred, data):
 
     Parameters
     ----------
-    pred 
+    pred
         (nx1) array, model predictions
     data
         (nx1) array, data points
@@ -53,21 +53,21 @@ def sum_squares_residuals(pred, data):
         data = np.array(data)
     if not isinstance(pred, np.ndarray):
         pred = np.array(pred)
-    res = (pred - data)**2 
+    res = (pred - data)**2
     ss_res = res.sum()
     return ss_res
-    
+
 def r_squared(pred, data):
     '''Calculate the R squared metric for predictions
 
-    R squared is the coefficient of determination of the 
-    model predictions. It is calculated by dividing the 
+    R squared is the coefficient of determination of the
+    model predictions. It is calculated by dividing the
     sum of squares of the residuals by the total sum of
     squares and subtracting from 1.
 
     Parameters
     ----------
-    pred 
+    pred
         (nx1) array, model predictions
     data
         (nx1) array, data points
@@ -80,14 +80,14 @@ def r_squared(pred, data):
     ss_res = sum_squares_residuals(pred, data)
     ss_tot = total_sum_squares(data)
     r_square = 1 - (ss_res / ss_tot)
-    return r_square    
+    return r_square
 
 def rmse(pred, data):
     """Calculate the root mean squared error
 
     Parameters
     ----------
-    pred 
+    pred
         (nx1) array, model predictions
     data
         (nx1) array, data points
@@ -98,21 +98,21 @@ def rmse(pred, data):
         float, root mean squared error
     """
     ss_res = sum_squares_residuals(pred, data)
-    rsme = ss_res / len(data)
-    return rsme
+    mse = ss_res / len(data)
+    return np.sqrt(mse)
 
 def mape(pred, data):
     """Calculate the mean absolute percentage error
 
     The mean absolute percentage error (MAPE) is calculated
     by summing over the absolute differences between actual
-    and predicted value divided by the actual value. The 
+    and predicted value divided by the actual value. The
     sum is divided by the number of data points. The mape is
     given in %.
 
     Parameters
     ----------
-    pred 
+    pred
         (nx1) array, model predictions
     data
         (nx1) array, data points
@@ -123,4 +123,3 @@ def mape(pred, data):
         float, mean absolute percentage error
     """
     return ((data - pred) / data).mean() * 100
-
