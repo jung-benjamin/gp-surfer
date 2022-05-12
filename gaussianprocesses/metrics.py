@@ -122,4 +122,4 @@ def mape(pred, data):
     mape
         float, mean absolute percentage error
     """
-    return ((data - pred) / data).mean() * 100
+    return np.abs(((data - pred) / data)).mean() * 100
