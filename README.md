@@ -20,3 +20,9 @@ def kernel_gradient(self, x1, x2)
 ```
 
 The `GaussianProcessRegression` class handles the hyperparameter optimization and can load and store prevously trained kernels.
+
+## Installing
+Go into the directory containing this source code and run `pip install .`
+
+## Example
+The example can be executed with `train_gp_surrogates example -x input_parameters_1000.csv -y output_values_1000.csv -i id_file_example.json`
