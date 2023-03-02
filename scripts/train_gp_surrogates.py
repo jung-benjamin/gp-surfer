@@ -168,6 +168,14 @@ def train_gp_surrogates():
             failed.append(iso)
     path_file = args.model_loc / f'{args.name}_filepaths.json'
     logging.info(f'Writing path file to {path_file}')
+    try:
+        with path_file.open('r') as f:
+            existing_file_paths = json.load(f)
+    except FileNotFoundError:
+        pass
+    else:
+        existing_file_paths.update(file_paths)
+        file_paths = existing_file_paths
     with path_file.open('w') as f:
         json.dump(file_paths, f, indent=True)
     logging.info(f'Training successful: {success}')
