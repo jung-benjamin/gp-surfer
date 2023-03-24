@@ -2,6 +2,8 @@
 
 """Train Gaussian processes as surrogate models"""
 
+import os
+import time
 import json
 import argparse
 import logging
@@ -91,9 +93,14 @@ def train(name, x, y, outpath, ntrain=200, maxiter=1, seed=2021, target=0.99):
     num_val = int((len(x) - ntrain) / 2 + ntrain)
     model.split_data(idx_train=(0, ntrain),idx_val=(num_val, None))
     try:
+        tick = time.perf_counter()
+        logging.info(f'Model {name} optimizer tick: {tick}')
         metric, params, info = model.optimize_metric(
             target=target, seed=seed, maxiter=maxiter, full_output=True
         )
+        tock = time.perf_counter()
+        logging.info(f'Model {name} optimizer tock: {tock}')
+        logging.info(f'Model {name} optimizer runtime: {tock - tick} seconds')
         model.store_kernel(outpath, how='json')
         logging.info(f'Model {name} validation: r-squared={metric}')
         test_metric = model.evaluate_predictions()
@@ -132,9 +139,13 @@ def make_model_dir(args):
 
 def train_gp_surrogates():
     """Train Gaussian processes as surrogate models"""
+    tick = time.perf_counter()
     args = argparser()
     set_logger(args)
+    logging.info(f'First tick: {tick}')
+    logging.info(f'Reading input variable data from {args.x_data}...')
     x_data = read_csv_data(args.x_data)
+    logging.info(f'Reading output value data from {args.y_data}...')
     y_data = read_csv_data(args.y_data, index_col=0)
     data_len = min([x_data.shape[0], y_data.shape[1]])
     x_data = x_data.iloc[:data_len]
@@ -142,12 +153,17 @@ def train_gp_surrogates():
     logging.debug(f'Input variable data shape: {x_data.shape}')
     logging.debug(f'Output value data shape: {y_data.shape}')
     id_list = get_model_ids(args, y_data)
+    training_len = len(id_list)
     logging.info(f'Training GP models for: {id_list}')
+    logging.info(f'Number of models to be trained: {training_len}')
     model_dir = make_model_dir(args)
     logging.info(f'Location of the GP-models: {model_dir}')
     crashed, failed, success = [], [], []
     file_paths = {}
-    for iso in id_list:
+    tl_tick = time.perf_counter()
+    logging.info(f'Training loop tick: {tl_tick}')
+    for step, iso in enumerate(id_list):
+        logging.info(f'Step {step: >{len(str(training_len))-len(str(step))}}/{training_len}: {iso}')
         file_name = f'{args.name}_{iso}_{args.run}.json'
         training = train(
             name=iso,
@@ -166,6 +182,9 @@ def train_gp_surrogates():
             crashed.append(iso)
         else:
             failed.append(iso)
+    tl_tock = time.perf_counter()
+    logging.info(f'Training loop tock: {tl_tock}')
+    logging.info(f'Training loop runtime: {tl_tock - tl_tick} seconds')
     path_file = args.model_loc / f'{args.name}_filepaths.json'
     logging.info(f'Writing path file to {path_file}')
     try:
@@ -181,6 +200,9 @@ def train_gp_surrogates():
     logging.info(f'Training successful: {success}')
     logging.info(f'Training unsuccessful: {failed}')
     logging.info(f'Training crashed: {crashed}')
+    tock = time.perf_counter()
+    logging.info(f'Last tock: {tock}')
+    logging.info(f'Total runtime: {tock - tick} seconds')
 
 if __name__ == '__main__':
     train_gp_surrogates()
