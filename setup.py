@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 setup(
     name='gaussianprocesses',
-    version='0.4.0',
+    version='0.5.1',
     packages=find_packages(
         include=['gaussianprocesses', 'gaussianprocesses.*']),
     description='A package for gaussian process regression.',
