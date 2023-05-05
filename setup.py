@@ -8,8 +8,8 @@ setup(
     description='A package for gaussian process regression.',
     entry_points={
         'console_scripts': [
-            'train_gp_surrogates = scripts:train_gp_surrogates',
-            'log_to_filepaths = scripts:log_to_filepaths'
+            'train_gp_surrogates = gaussianprocesses.scripts:train_gp_surrogates',
+            'log_to_filepaths = gaussianprocesses.scripts:log_to_filepaths'
         ]
     },
 )
