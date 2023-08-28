@@ -10,7 +10,7 @@ import pandas as pd
 
 PATH_REGEX = re.compile(
     r"""
-    ([a-zA-z]{1,2}-\d{1,3}\*?)
+    ([a-zA-z]{1,2}-\d{1,3}m?|\*?)
     \s
     path
     :\s
@@ -19,7 +19,7 @@ PATH_REGEX = re.compile(
 
 RSQ_REGEX = re.compile(
     r"""
-    ([a-zA-z]{1,2}-\d{1,3}\*?)
+    ([a-zA-z]{1,2}-\d{1,3}m?|\*?)
     \s
     (test|validation)
     :\sr-squared=
