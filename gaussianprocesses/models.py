@@ -579,6 +579,8 @@ class GaussianProcessRegression():
             compare = getattr(self.data, y).y
             if y != x:
                 warnings.warn('X and Y data do not match.')
+        else:
+            compare = y
         if isinstance(metric, list):
             performance = {}
             for m in metric:
