@@ -179,12 +179,11 @@ class SquaredExponential(Kernel):
 
     def kernel_function(self, x1, x2):
         """Describe the squared exponential kernel here"""
-        sqdist = (np.sum(x1**2, axis = 1).reshape(-1, 1)
-                  + np.sum(x2**2, 1)
-                  - 2 * np.dot(x1, x2.T)
-                  )
-        cov = self.parameters[0]**2 * np.exp(-0.5 * sqdist / self.parameters[1]**2)
-        noise = self.parameters[-1]**2 * np.eye(x1.shape[0])
+        sqdist = (np.sum(x1**2, axis=1).reshape(-1, 1) + np.sum(x2**2, 1) -
+                  2 * np.dot(x1, x2.T))
+        cov = self.parameters[0]**2 * np.exp(
+            -0.5 * sqdist / self.parameters[1]**2)
+        noise = self.parameters[-1]**2 * np.eye(cov.shape[0])
         return cov + noise
 
     def __str__(self):
@@ -197,15 +196,14 @@ class SquaredExponential(Kernel):
 
     def kernel_gradient(self, x1, x2):
         """Compute the gradient of the kernel function"""
-        sqdist = (np.sum(x1**2, axis = 1).reshape(-1, 1)
-                  + np.sum(x2**2, 1)
-                  - 2 * np.dot(x1, x2.T)
-                  )
+        sqdist = (np.sum(x1**2, axis=1).reshape(-1, 1) + np.sum(x2**2, 1) -
+                  2 * np.dot(x1, x2.T))
         k = self.kernel_function(x1, x2)
-        gradients = [2 * self.parameters[0] * k,
-                     np.multiply(sqdist / self.parameters[1]**3, k),
-                     2 * self.parameters[-1] * np.eye(x1.shape[0])
-                     ]
+        gradients = [
+            2 * self.parameters[0] * k,
+            np.multiply(sqdist / self.parameters[1]**3, k),
+            2 * self.parameters[-1] * np.eye(k.shape[0])
+        ]
         return gradients
 
 
@@ -239,22 +237,23 @@ class AnisotropicSquaredExponential(Kernel):
         x2 = np.dot(x2, lam)
         sqdist = cdist(x1, x2, metric = 'sqeuclidean').T
         cov = self.parameters[0]**2 * np.exp(-0.5 * sqdist)
-        noise = self.parameters[-1]**2 * np.eye(x1.shape[0])
+        noise = self.parameters[-1]**2 * np.eye(*cov.shape)
         return cov + noise
 
     def kernel_gradient(self, x1, x2):
         """Compute the gradient of the covariance matrix"""
         k = self.kernel_function(x1, x2)
-        g = [cdist(np.expand_dims(x1[:,i], -1), #np.newaxis?
-                   np.expand_dims(x2[:,i], -1), 
-                   metric = 'sqeuclidean'
-                   ) / self.parameters[i+1]
-             for i in range(x1.shape[1])
-             ]
-        gradients = ([2 * self.parameters[0] * k]
-                     + [np.multiply(g[i], k) for i in range(x1.shape[1])]
-                     + [2 * self.parameters[-1] * np.eye(x1.shape[0])]
-                     )
+        g = [
+            cdist(
+                np.expand_dims(x1[:, i], -1),  #np.newaxis?
+                np.expand_dims(x2[:, i], -1),
+                metric='sqeuclidean') / self.parameters[i + 1]
+            for i in range(x1.shape[1])
+        ]
+        gradients = (
+            [2 * self.parameters[0] * k] +
+            [np.multiply(g[i], k) for i in range(len(self.parameters[1:-1]))] +
+            [2 * self.parameters[-1] * np.eye(*k.shape)])
         return gradients
     
     def create_lambda(self, x1):
