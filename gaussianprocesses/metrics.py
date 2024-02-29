@@ -1,8 +1,8 @@
 #! /usr/bin/env python3
-
 """Metrics to evaluate quality of the GP models"""
 
 import numpy as np
+
 
 def total_sum_squares(data, axis=None):
     '''Calculate the total sum of squares of errors
@@ -28,6 +28,7 @@ def total_sum_squares(data, axis=None):
     sq_diff = (data - mean)**2
     ss_tot = sq_diff.sum()
     return ss_tot
+
 
 def sum_squares_residuals(pred, data):
     '''Calculate the sum of squares of the residual errors
@@ -57,6 +58,7 @@ def sum_squares_residuals(pred, data):
     ss_res = res.sum()
     return ss_res
 
+
 def r_squared(pred, data):
     '''Calculate the R squared metric for predictions
 
@@ -82,6 +84,7 @@ def r_squared(pred, data):
     r_square = 1 - (ss_res / ss_tot)
     return r_square
 
+
 def rmse(pred, data):
     """Calculate the root mean squared error
 
@@ -100,6 +103,7 @@ def rmse(pred, data):
     ss_res = sum_squares_residuals(pred, data)
     mse = ss_res / len(data)
     return np.sqrt(mse)
+
 
 def mape(pred, data):
     """Calculate the mean absolute percentage error

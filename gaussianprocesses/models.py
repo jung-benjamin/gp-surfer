@@ -1,5 +1,4 @@
 #! /usr/bin/env python3
-
 """Gaussian process regression model classes
 
 Classes for building a gpr model and optimizing the
@@ -7,22 +6,23 @@ hyperparameters.
 """
 
 import json
-import numpy as np
 import warnings
-import matplotlib.pyplot as plt
+from json import JSONDecoder, JSONEncoder
 
-from json import JSONEncoder, JSONDecoder
+import matplotlib.pyplot as plt
+import numpy as np
 from scipy import linalg
 from scipy.optimize import fmin_l_bfgs_b
 
+import gaussianprocesses.kernels as kernels
 import gaussianprocesses.metrics as metrics
 import gaussianprocesses.transformations as tr
-import gaussianprocesses.kernels as kernels
 from gaussianprocesses.dataclass import ModelData
 
 
 class NumpyArrayEncoder(JSONEncoder):
     """JSONEncoder that supports numpy arrays."""
+
     def default(self, obj):
         if isinstance(obj, np.ndarray):
             return obj.tolist()
@@ -50,16 +50,17 @@ class GaussianProcessRegression():
             of transformation. The keyword 'transformation'
             takes precedent over 'x_trafo' and 'y_trafo'.
         """
-        arguments = {'x_train' : None,
-                     'y_train' : None,
-                     'x_test' : None,
-                     'y_test' : None,
-                     'x_validate' : None,
-                     'y_validate' : None,
-                     'transformation' : None,
-                     'x_trafo' : None,
-                     'y_trafo' : None,
-                     }
+        arguments = {
+            'x_train': None,
+            'y_train': None,
+            'x_test': None,
+            'y_test': None,
+            'x_validate': None,
+            'y_validate': None,
+            'transformation': None,
+            'x_trafo': None,
+            'y_trafo': None,
+        }
         arguments.update(kwargs)
         self.kernel = kernel
         self.data = ModelData(**arguments)
@@ -136,9 +137,10 @@ class GaussianProcessRegression():
     @property
     def transformation(self):
         """Return the transformation classes"""
-        trafo_dict = {'x_trafo' : self._x_transformation,
-                      'y_trafo' : self._y_transformation,
-                      }
+        trafo_dict = {
+            'x_trafo': self._x_transformation,
+            'y_trafo': self._y_transformation,
+        }
         return trafo_dict
 
     @transformation.setter
@@ -247,7 +249,7 @@ class GaussianProcessRegression():
             split_y = np.array_split(conc.y, 3)
         elif idx_val is None:
             idx1 = np.arange(*idx_train)
-            split_x = [conc.x[idx1,:]]
+            split_x = [conc.x[idx1, :]]
             split_y = [conc.y[idx1]]
             split_x += [np.delete(conc.x, idx1, axis=0)]
             split_y += [np.delete(conc.y, idx1, axis=0)]
@@ -259,21 +261,24 @@ class GaussianProcessRegression():
             split_y = [None]
             split_x += [np.delete(conc.x, idx2, axis=0)]
             split_y += [np.delete(conc.y, idx2, axis=0)]
-            split_x += [conc.x[idx2,:]]
+            split_x += [conc.x[idx2, :]]
             split_y += [conc.y[idx2]]
         else:
             idx1 = np.arange(*idx_train)
             idx2 = np.arange(*idx_val)
             idx3 = np.concatenate([idx1, idx2])
-            split_x = [conc.x[idx1,:]]
+            split_x = [conc.x[idx1, :]]
             split_y = [conc.y[idx1]]
             split_x += [np.delete(conc.x, idx3, axis=0)]
             split_y += [np.delete(conc.y, idx3, axis=0)]
-            split_x += [conc.x[idx2,:]]
+            split_x += [conc.x[idx2, :]]
             split_y += [conc.y[idx2]]
-        self.data.train = {'x_train' : split_x[0], 'y_train' : split_y[0]}
-        self.data.test = {'x_test' : split_x[1], 'y_test' : split_y[1]}
-        self.data.validate = {'x_validate' : split_x[2], 'y_validate' : split_y[2]}
+        self.data.train = {'x_train': split_x[0], 'y_train': split_y[0]}
+        self.data.test = {'x_test': split_x[1], 'y_test': split_y[1]}
+        self.data.validate = {
+            'x_validate': split_x[2],
+            'y_validate': split_y[2]
+        }
 
     def posterior_predictive(self, x_test, cov=False):
         """Compute statistics of the posterior predictive distribution
@@ -302,7 +307,7 @@ class GaussianProcessRegression():
         L_ = linalg.cholesky(K, lower=True)
         ## This try an except may cause errors to go unnoticed.
         try:
-            alpha_ = linalg.cho_solve((L_,True), yt)
+            alpha_ = linalg.cho_solve((L_, True), yt)
         except ValueError:
             if cov:
                 return 0, 0
@@ -317,7 +322,10 @@ class GaussianProcessRegression():
         else:
             return self.untransform_y(mu_s)
 
-    def log_marginal_likelihood(self, theta,):
+    def log_marginal_likelihood(
+        self,
+        theta,
+    ):
         """Compute the negative log marginal likelihood
 
         The negative log marginal likelihood is computed for
@@ -345,31 +353,31 @@ class GaussianProcessRegression():
         self.kernel.parameters = theta
         x_train = self.transform_x(self.data.train.x)
         y_train = self.transform_y(self.data.train.y)
-        K, dK = self.kernel(x_train, x_train, grad = True)
+        K, dK = self.kernel(x_train, x_train, grad=True)
         try:
             L = linalg.cholesky(K, lower=True)
-            L_inv = linalg.solve_triangular(L.T,np.eye(L.shape[0]))
+            L_inv = linalg.solve_triangular(L.T, np.eye(L.shape[0]))
             K_inv = L_inv.dot(L_inv.T)
 
             alpha = linalg.cho_solve((L, True), y_train)
 
-            nll = (np.sum(np.log(np.diagonal(L)))
-                   + 0.5 * np.dot(y_train.T, alpha)
-                   + 0.5 * len(x_train) * np.log(2*np.pi)
-                  )
+            nll = (np.sum(np.log(np.diagonal(L))) +
+                   0.5 * np.dot(y_train.T, alpha) +
+                   0.5 * len(x_train) * np.log(2 * np.pi))
 
             Tr_arg = alpha.dot(alpha.T) - K_inv
 
-            dnll = [-0.5 * np.trace(Tr_arg.dot(dK[i]))
-                    for i in range(theta.shape[0])
-                   ]
+            dnll = [
+                -0.5 * np.trace(Tr_arg.dot(dK[i]))
+                for i in range(theta.shape[0])
+            ]
             dnll = np.array(dnll)
 
             return nll, dnll
 
         except (np.linalg.LinAlgError, ValueError):
             # In case K is not positive semidefinite
-            return np.inf,np.array([np.inf for i in range(theta.shape[0])])
+            return np.inf, np.array([np.inf for i in range(theta.shape[0])])
 
     def optimize(self, n_steps=1, first_params=None, seed=2021, verbose=False):
         """Optimize the hyperparameters of the kernel
@@ -405,14 +413,15 @@ class GaussianProcessRegression():
         rng = np.random.default_rng(seed)
         start_params = rng.random(size=(n_steps, n_params))
         if first_params is not None:
-            start_params[0,:] = first_params
+            start_params[0, :] = first_params
 
         for i, p in enumerate(start_params):
-            res = fmin_l_bfgs_b(obj_func,
-                                p,
-                                fprime = None,
-                                bounds = self.kernel.bounds,
-                               )
+            res = fmin_l_bfgs_b(
+                obj_func,
+                p,
+                fprime=None,
+                bounds=self.kernel.bounds,
+            )
             opt_position[i] = res[0]
             opt_value[i] = res[1]
 
@@ -424,8 +433,13 @@ class GaussianProcessRegression():
         optimized_params = opt_position[min_idx]
         self.kernel.parameters = optimized_params
 
-    def optimize_metric(self, target, metric='r_squared', n_steps=1000,
-                        seed=2021, maxiter=100, full_output=False):
+    def optimize_metric(self,
+                        target,
+                        metric='r_squared',
+                        n_steps=1000,
+                        seed=2021,
+                        maxiter=100,
+                        full_output=False):
         """Repeat hyperparameter optimization to improve metric
 
         Repeatedly optimizes the hyperparameters and computes the
@@ -473,7 +487,7 @@ class GaussianProcessRegression():
         best = metrics.argmax()
         self.kernel.parameters = parameters[best]
         if full_output:
-            info = {'niter' : i+1}
+            info = {'niter': i + 1}
             return metrics[best], parameters[best], info
         return metrics[best], parameters[best]
 
@@ -484,7 +498,7 @@ class GaussianProcessRegression():
         K = self.kernel(xt, xt, grad=False)
         L_ = linalg.cholesky(K, lower=True)
         try:
-            alpha_ = linalg.cho_solve((L_,True), yt)
+            alpha_ = linalg.cho_solve((L_, True), yt)
         except ValueError:
             return 0
         return alpha_
@@ -594,7 +608,11 @@ class GaussianProcessRegression():
             performance = test_func(prediction, compare)
         return performance
 
-    def plot_predictions(self, x='test', y=None, plot_compare=True, **pltkwargs):
+    def plot_predictions(self,
+                         x='test',
+                         y=None,
+                         plot_compare=True,
+                         **pltkwargs):
         """Plot the model predictions"""
         prediction = self.predictions(x=x)
         if y is None:
@@ -610,9 +628,9 @@ class GaussianProcessRegression():
 
         fig, axes = plt.subplots(1, xdata.shape[1], **pltkwargs)
         for i, ax in enumerate(axes):
-            ax.scatter(xdata[:,i], prediction, label='Prediction')
+            ax.scatter(xdata[:, i], prediction, label='Prediction')
             if plot_compare:
-                ax.scatter(xdata[:,i], compare, label='True')
+                ax.scatter(xdata[:, i], compare, label='True')
         plt.show()
 
     def store_kernel(self, path, how='npy', exact_copy=False):
@@ -642,18 +660,26 @@ class GaussianProcessRegression():
         alpha = self.compute_alpha()
         inv = self.compute_kernel_inverse()
         if how == 'npy':
-            d = {'Params': params,
-                 'LAMBDA': lam,
-                 'alpha_': alpha,
-                 'K_inv': inv,
-                 'x_train': self.data.train.x,
-                 'y_train': self.data.train.y,
-                 'y_trafo': (self.y_transformation.__class__.__name__,
-                             self.y_transformation.transformation_parameters),
-                 'x_trafo': (self.x_transformation.__class__.__name__,
-                             self.x_transformation.transformation_parameters),
-                 'kernel': self.kernel.__class__.__name__,
-                 }
+            d = {
+                'Params':
+                params,
+                'LAMBDA':
+                lam,
+                'alpha_':
+                alpha,
+                'K_inv':
+                inv,
+                'x_train':
+                self.data.train.x,
+                'y_train':
+                self.data.train.y,
+                'y_trafo': (self.y_transformation.__class__.__name__,
+                            self.y_transformation.transformation_parameters),
+                'x_trafo': (self.x_transformation.__class__.__name__,
+                            self.x_transformation.transformation_parameters),
+                'kernel':
+                self.kernel.__class__.__name__,
+            }
             if exact_copy:
                 d['x_test'] = self.data.test.x
                 d['y_test'] = self.data.test.y
@@ -661,18 +687,26 @@ class GaussianProcessRegression():
                 d['y_validate'] = self.data.validate.y
             np.save(path, d)
         elif how == 'json':
-            d = {'Params': params,
-                 'LAMBDA': lam,
-                 'alpha_': alpha,
-                 'K_inv': inv,
-                 'x_train': self.data.train.x,
-                 'y_train': self.data.train.y,
-                 'y_trafo': (self.y_transformation.__class__.__name__,
-                             self.y_transformation.transformation_parameters),
-                 'x_trafo': (self.x_transformation.__class__.__name__,
-                             self.x_transformation.transformation_parameters),
-                 'kernel': self.kernel.__class__.__name__,
-                 }
+            d = {
+                'Params':
+                params,
+                'LAMBDA':
+                lam,
+                'alpha_':
+                alpha,
+                'K_inv':
+                inv,
+                'x_train':
+                self.data.train.x,
+                'y_train':
+                self.data.train.y,
+                'y_trafo': (self.y_transformation.__class__.__name__,
+                            self.y_transformation.transformation_parameters),
+                'x_trafo': (self.x_transformation.__class__.__name__,
+                            self.x_transformation.transformation_parameters),
+                'kernel':
+                self.kernel.__class__.__name__,
+            }
             if exact_copy:
                 d['x_test'] = self.data.test.x
                 d['y_test'] = self.data.test.y

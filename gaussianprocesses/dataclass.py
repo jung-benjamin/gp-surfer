@@ -1,9 +1,9 @@
 #! /usr/bin/env python3
-
 """Classes for storing the data of the GPR model"""
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+
 
 class Data():
     """Store x and y data for the GPR model"""
@@ -65,7 +65,7 @@ class Data():
         num_ax = (int(np.round(np.sqrt(dim))), int(np.ceil(np.sqrt(dim))))
         fig, axes = plt.subplots(*num_ax, **pltkwargs)
         for i, ax in zip(range(dim), axes.flatten()):
-            ax.scatter(self.x[:,i], self.y)
+            ax.scatter(self.x[:, i], self.y)
         if show:
             plt.show()
         else:
@@ -77,10 +77,14 @@ class ModelData():
 
     def __init__(self, **kwargs):
         """Set the data for the class"""
-        arguments = {'x_train' : None, 'y_train' : None,
-                     'x_test' : None, 'y_test' : None,
-                     'x_validate' : None, 'y_validate' : None
-                     }
+        arguments = {
+            'x_train': None,
+            'y_train': None,
+            'x_test': None,
+            'y_test': None,
+            'x_validate': None,
+            'y_validate': None
+        }
         arguments.update(kwargs)
         self.train = arguments
         self.test = arguments
@@ -120,8 +124,10 @@ class ModelData():
         """Concatenate the three categories into one Data object"""
         conc = Data()
         categories = [self.train, self.test, self.validate]
-        conc.x = np.concatenate([n.x for n in categories if n.x is not None], axis=0)
-        conc.y = np.concatenate([n.y for n in categories if n.y is not None], axis=0)
+        conc.x = np.concatenate([n.x for n in categories if n.x is not None],
+                                axis=0)
+        conc.y = np.concatenate([n.y for n in categories if n.y is not None],
+                                axis=0)
         if conc.x.shape[0] != conc.y.shape[0]:
             raise ValueError('Lengths of x and y do not match')
         return conc

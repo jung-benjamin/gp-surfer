@@ -1,5 +1,4 @@
 #! /usr/bin/env python3
-
 """Transform the Data for GPR Training
 
 Defines a base class that is used to transform data
@@ -12,8 +11,10 @@ Mapping to 0 and 1 and transforming to a normal
 distribution are implemented.
 """
 
-import numpy as np
 from abc import ABC, abstractmethod
+
+import numpy as np
+
 
 class Transformation(ABC):
     """Abstract base class for transforming data"""

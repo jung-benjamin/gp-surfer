@@ -1,5 +1,4 @@
 #! /usr/bin/env python3
-
 """Kernel objects for gaussian process regression
 
 A base class for the kernels is defined with which new
@@ -7,8 +6,9 @@ kernels can be defined by implementing the required
 methods.
 """
 
-import numpy as np
 from abc import ABC, abstractmethod
+
+import numpy as np
 from scipy.spatial.distance import cdist
 
 
@@ -38,7 +38,7 @@ class Kernel(ABC):
             self.bounds = []
         elif bounds is None:
             self.bounds = [(0, np.inf) for i in range(len(parameters[:-1]))]
-            # the last parameter should be the noise parameter and 
+            # the last parameter should be the noise parameter and
             # needs to be limited more
             self.bounds.append((1e-12, 1e-10))
         else:
@@ -53,8 +53,8 @@ class Kernel(ABC):
         if grad:
             return self.kernel_function(x1, x2), self.kernel_gradient(x1, x2)
         else:
-            return self.kernel_function(x1, x2)    
-        
+            return self.kernel_function(x1, x2)
+
     @abstractmethod
     def kernel_function(self, x1, x2):
         """Construct the covariance matrix"""
@@ -94,7 +94,7 @@ class Combination(Kernel):
     """Combine a list of kernels"""
 
     def __init__(self, kernels):
-        """Join parameters and bounds of the kernels""" 
+        """Join parameters and bounds of the kernels"""
         self.kernel_list = kernels
         self.parameters = []
         self.bounds = []
@@ -122,12 +122,13 @@ class Combination(Kernel):
         pass
 
     def kernel_function(self, x1, x2):
-        return self._combine_function([k.kernel_function(x1, x2) for k in self.kernel_list])
+        return self._combine_function(
+            [k.kernel_function(x1, x2) for k in self.kernel_list])
 
     def kernel_gradient(self, x1, x2):
-        return self._combine_gradient([k.kernel_function(x1, x2) for k in self.kernel_list],
-                                      [k.kernel_gradient(x1, x2) for k in self.kernel_list]
-                                      )
+        return self._combine_gradient(
+            [k.kernel_function(x1, x2) for k in self.kernel_list],
+            [k.kernel_gradient(x1, x2) for k in self.kernel_list])
 
 
 class Sum(Combination):
@@ -151,7 +152,7 @@ class Sum(Combination):
 
 class Product(Combination):
     """Calculate the product of kernels"""
-    
+
     def _combine_string(self):
         return ' * '.join([f'({str(k)})' for k in self.kernel_list])
 
@@ -209,7 +210,7 @@ class SquaredExponential(Kernel):
 
 class AnisotropicSquaredExponential(Kernel):
     """An anisotropic squared exponential kernel"""
-    
+
     def __init__(self, *args, **kwargs):
         """Initialize the kernel with parameters"""
         Kernel.__init__(self, *args, **kwargs)
@@ -222,12 +223,12 @@ class AnisotropicSquaredExponential(Kernel):
         combinations of kernel.
         """
         return 'Anisotropic Squared Exponential Kernel'
-        
+
     def kernel_function(self, x1, x2):
         """Compute the covariance matrix"""
-#         lam = np.eye(len(x1[0]))
-#         length_scales = 1 / np.array(self.parameters[1:-1])
-#         np.fill_diagonal(lam, length_scales)
+        #         lam = np.eye(len(x1[0]))
+        #         length_scales = 1 / np.array(self.parameters[1:-1])
+        #         np.fill_diagonal(lam, length_scales)
         #if self.lambda_ is None:
         #    lam = self.create_lambda(x1)
         #else:
@@ -235,7 +236,7 @@ class AnisotropicSquaredExponential(Kernel):
         lam = self.create_lambda(x1)
         x1 = np.dot(x1, lam)
         x2 = np.dot(x2, lam)
-        sqdist = cdist(x1, x2, metric = 'sqeuclidean').T
+        sqdist = cdist(x1, x2, metric='sqeuclidean').T
         cov = self.parameters[0]**2 * np.exp(-0.5 * sqdist)
         noise = self.parameters[-1]**2 * np.eye(*cov.shape)
         return cov + noise
@@ -255,7 +256,7 @@ class AnisotropicSquaredExponential(Kernel):
             [np.multiply(g[i], k) for i in range(len(self.parameters[1:-1]))] +
             [2 * self.parameters[-1] * np.eye(*k.shape)])
         return gradients
-    
+
     def create_lambda(self, x1):
         """Calculate the matrix with lengthscales for the kernel"""
         lam = np.eye(len(x1[0]))
@@ -263,7 +264,7 @@ class AnisotropicSquaredExponential(Kernel):
         np.fill_diagonal(lam, length_scales)
         self.lambda_ = lam
         return lam
-        
+
 
 class Linear(Kernel):
     """A linear kernel"""
@@ -272,7 +273,7 @@ class Linear(Kernel):
         """Initialize the kernel with parameters"""
         Kernel.__init__(self, *args, **kwargs)
         self.lambda_ = None
-    
+
     def __str__(self):
         """String of the class name
 
@@ -289,24 +290,20 @@ class Linear(Kernel):
             lam = self.lambda_
         x1 = np.dot(x1, lam)
         x2 = np.dot(x2, lam)
-        cov = (self.parameters[0] * np.dot(x1, x2.T).T
-               + self.parameters[1]
-               + self.parameters[-1]**2 * np.eye(x1.shape[0])
-               )
+        cov = (self.parameters[0] * np.dot(x1, x2.T).T + self.parameters[1] +
+               self.parameters[-1]**2 * np.eye(x1.shape[0]))
         return cov
 
     def kernel_gradient(self, x1, x2):
         """Compute the gradient of the covariance matrix"""
         k = self.kernel_function(x1, x2)
-        g = [np.dot(x1, x2.T).T] + [
-             np.eye(k.shape[0])] + [
-             (2 * self.parameters[0] * np.dot(np.expand_dims(x1[:,i],-1),
-                                       np.expand_dims(x2[:,i],-1).T).T
-              / self.parameters[i]
-              )
-             for i in range(x1.shape[1])
-             ]
-        gradients = g + [2 * self.parameters[-1] * np.eye(x1.shape[0])] 
+        g = [np.dot(x1, x2.T).T] + [np.eye(k.shape[0])] + [
+            (2 * self.parameters[0] *
+             np.dot(np.expand_dims(x1[:, i], -1),
+                    np.expand_dims(x2[:, i], -1).T).T / self.parameters[i])
+            for i in range(x1.shape[1])
+        ]
+        gradients = g + [2 * self.parameters[-1] * np.eye(x1.shape[0])]
         return gradients
 
     def create_lambda(self, x1):
@@ -316,4 +313,3 @@ class Linear(Kernel):
         np.fill_diagonal(lam, length_scales)
         self.lambda_ = lam
         return lam
-
