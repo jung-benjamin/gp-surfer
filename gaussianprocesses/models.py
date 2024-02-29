@@ -298,7 +298,7 @@ class GaussianProcessRegression():
         xtest = self.transform_x(x_test)
         yt = self.transform_y(self.data.train.y)
         K = self.kernel(xt, xt, grad=False)
-        K_s =  self.kernel(xt, xtest, grad=False)
+        K_s = self.kernel(xt, xtest, grad=False).squeeze()
         L_ = linalg.cholesky(K, lower=True)
         ## This try an except may cause errors to go unnoticed.
         try:
@@ -312,10 +312,10 @@ class GaussianProcessRegression():
         if cov:
             K_ss = self.kernel(xtest, xtest, grad=False)
             K_inv = self.compute_kernel_inverse()
-            cov_s = K_ss - K_s.dot(K_inv).dot(K_s)
-            return self.untransform_y(mu_s[0]), cov_s
+            cov_s = K_ss - K_s.dot(K_inv).dot(K_s.T)
+            return self.untransform_y(mu_s), cov_s
         else:
-            return self.untransform_y(mu_s[0])
+            return self.untransform_y(mu_s)
 
     def log_marginal_likelihood(self, theta,):
         """Compute the negative log marginal likelihood
@@ -579,6 +579,8 @@ class GaussianProcessRegression():
             compare = getattr(self.data, y).y
             if y != x:
                 warnings.warn('X and Y data do not match.')
+        else:
+            compare = y
         if isinstance(metric, list):
             performance = {}
             for m in metric:
