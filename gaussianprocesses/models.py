@@ -8,6 +8,7 @@ hyperparameters.
 import json
 import warnings
 from json import JSONDecoder, JSONEncoder
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -778,3 +779,20 @@ class GPRQuotient():
         if inv:
             return 1 / quotient
         return quotient
+
+
+class ModelCollection(dict):
+    """A dict-like collection of GP models."""
+
+    @classmethod
+    def from_json(cls, fp, base='.'):
+        """Create model collection from filepaths file."""
+        with open(fp, 'r') as f:
+            file_paths = json.load(f)
+        return cls((n, GaussianProcessRegression.from_json(Path(base, *it)))
+                   for n, it in file_paths.items())
+
+    def get_quotient_models(self, quotients):
+        """Create a collection of GP quotient models."""
+        return ModelCollection(
+            (q, GPRQuotient(*map(self.get, q.split('/')))) for q in quotients)
