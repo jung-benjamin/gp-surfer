@@ -281,6 +281,10 @@ class GaussianProcessRegression():
             'y_validate': split_y[2]
         }
 
+    def __call__(self, x, cov=False):
+        """Call the posterior predictive method."""
+        return self.posterior_predictive(x_test=x, cov=cov)
+
     def posterior_predictive(self, x_test, cov=False):
         """Compute statistics of the posterior predictive distribution
 
@@ -779,6 +783,10 @@ class GPRQuotient():
         if inv:
             return 1 / quotient
         return quotient
+
+    def __call__(self, x):
+        """Calculate the quotient of the model calls."""
+        return self.mi(x) / self.mj(x)
 
 
 class ModelCollection(dict):
