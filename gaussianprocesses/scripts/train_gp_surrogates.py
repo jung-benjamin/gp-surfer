@@ -1,18 +1,16 @@
 #! /usr/bin/env python3
-
 """Train Gaussian processes as surrogate models"""
 
+import argparse
+import json
+import logging
 import os
 import time
-import json
-import argparse
-import logging
 from pathlib import Path
 
+import gaussianprocesses as gp
 import numpy as np
 import pandas as pd
-
-import gaussianprocesses as gp
 
 
 def argparser():
@@ -27,9 +25,17 @@ def argparser():
     run = 'Identify the iteration of training.'
     parser.add_argument('-r', '--run', help=run, type=int, default=1)
     ntrain = 'Number of points in the training data.'
-    parser.add_argument('-n', '--num-train', help=ntrain, type=int, default=200)
+    parser.add_argument('-n',
+                        '--num-train',
+                        help=ntrain,
+                        type=int,
+                        default=200)
     target = 'Target R-squared value for the GP models.'
-    parser.add_argument('-t', '--target', help=target, type=float, default=0.99)
+    parser.add_argument('-t',
+                        '--target',
+                        help=target,
+                        type=float,
+                        default=0.99)
     max_iter = 'Maximum number of iterations for optimizing r-squared.'
     parser.add_argument('--max-iter', help=max_iter, default=1, type=int)
     seed = 'Seed for the random number generator.'
@@ -60,7 +66,8 @@ def read_csv_data(datafile, index_col=None):
     """Read the data from the csv file into a dataframe."""
     data = pd.read_csv(datafile, index_col=index_col, header=[0])
     try:
-        data.drop('Unnamed: 0', axis=0, inplace=True)
+        data.drop('Unnamed: 0', axis=1, inplace=True)
+        logging.debug(f'Dropped column: Unnamed: 0')
     except KeyError:
         pass
     return data
@@ -84,20 +91,23 @@ def train(name, x, y, outpath, ntrain=200, maxiter=1, seed=2021, target=0.99):
     """Train a gp-model"""
     train_x = x.values
     n_params = train_x.shape[1]
-    train_y = y.loc[name,:].values
-    trafo = {'x_trafo' : 'Normalize', 'y_trafo' : 'StandardNormalize'}
-    kernel = gp.kernels.AnisotropicSquaredExponential([1]*(n_params+1) + [10])
-    model = gp.models.GaussianProcessRegression(
-        x_train=train_x, y_train=train_y, kernel=kernel, transformation=trafo
-    )
+    train_y = y.loc[name, :].values
+    trafo = {'x_trafo': 'Normalize', 'y_trafo': 'StandardNormalize'}
+    kernel = gp.kernels.AnisotropicSquaredExponential([1] * (n_params + 1) +
+                                                      [10])
+    model = gp.models.GaussianProcessRegression(x_train=train_x,
+                                                y_train=train_y,
+                                                kernel=kernel,
+                                                transformation=trafo)
     num_val = int((len(x) - ntrain) / 2 + ntrain)
-    model.split_data(idx_train=(0, ntrain),idx_val=(num_val, None))
+    model.split_data(idx_train=(0, ntrain), idx_val=(num_val, None))
     try:
         tick = time.perf_counter()
         logging.info(f'Model {name} optimizer tick: {tick}')
-        metric, params, info = model.optimize_metric(
-            target=target, seed=seed, maxiter=maxiter, full_output=True
-        )
+        metric, params, info = model.optimize_metric(target=target,
+                                                     seed=seed,
+                                                     maxiter=maxiter,
+                                                     full_output=True)
         tock = time.perf_counter()
         logging.info(f'Model {name} optimizer tock: {tock}')
         logging.info(f'Model {name} optimizer runtime: {tock - tick} seconds')
@@ -149,7 +159,7 @@ def train_gp_surrogates():
     y_data = read_csv_data(args.y_data, index_col=0)
     data_len = min([x_data.shape[0], y_data.shape[1]])
     x_data = x_data.iloc[:data_len]
-    y_data = y_data.iloc[:,:data_len]
+    y_data = y_data.iloc[:, :data_len]
     logging.debug(f'Input variable data shape: {x_data.shape}')
     logging.debug(f'Output value data shape: {y_data.shape}')
     id_list = get_model_ids(args, y_data)
@@ -163,18 +173,18 @@ def train_gp_surrogates():
     tl_tick = time.perf_counter()
     logging.info(f'Training loop tick: {tl_tick}')
     for step, iso in enumerate(id_list):
-        logging.info(f'Step {step: >{len(str(training_len))-len(str(step))}}/{training_len}: {iso}')
-        file_name = f'{args.name}_{iso}_{args.run}.json'
-        training = train(
-            name=iso,
-            x=x_data,
-            y=y_data,
-            outpath=model_dir / file_name,
-            maxiter=args.max_iter,
-            ntrain=args.num_train,
-            seed=args.seed,
-            target=args.target
+        logging.info(
+            f'Step {step: >{len(str(training_len))-len(str(step))}}/{training_len}: {iso}'
         )
+        file_name = f'{args.name}_{iso}_{args.run}.json'
+        training = train(name=iso,
+                         x=x_data,
+                         y=y_data,
+                         outpath=model_dir / file_name,
+                         maxiter=args.max_iter,
+                         ntrain=args.num_train,
+                         seed=args.seed,
+                         target=args.target)
         if training:
             success.append(iso)
             file_paths[iso] = [get_set_id(args), file_name]
@@ -203,6 +213,7 @@ def train_gp_surrogates():
     tock = time.perf_counter()
     logging.info(f'Last tock: {tock}')
     logging.info(f'Total runtime: {tock - tick} seconds')
+
 
 if __name__ == '__main__':
     train_gp_surrogates()
