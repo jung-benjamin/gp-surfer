@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy import linalg
 from scipy.optimize import fmin_l_bfgs_b
+from tqdm import tqdm
 
 import gaussianprocesses.kernels as kernels
 import gaussianprocesses.metrics as metrics
@@ -804,3 +805,9 @@ class ModelCollection(dict):
         """Create a collection of GP quotient models."""
         return ModelCollection(
             (q, GPRQuotient(*map(self.get, q.split('/')))) for q in quotients)
+
+    def calculate_predictions(self, x, subset=None):
+        """Calculate predictions for all models."""
+        if subset is None:
+            subset = self.keys()
+        return {n: self[n](x) for n in tqdm(subset, disable=None)}
