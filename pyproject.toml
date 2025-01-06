@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gaussianprocesses"
+version = "0.5.1"
+authors = [{ name = "Benjamin Jung" }]
+description = "A simple package for Gaussian process regression."
+requires-python = ">=3.10"
+dependencies = ["numpy", "scipy", "matplotlib", "tqdm", "sympy"]
+
+[project.scripts]
+train_gp_surrogates = "gaussianprocesses.scripts:train_gp_surrogates"
+log_to_filepaths = "gaussianprocesses.scripts:log_to_filepaths"
+
+[tool.setuptools.packages.find]
+include = ["gaussianprocesses", "gaussianprocesses.*"]
+namespaces = false
