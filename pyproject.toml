@@ -13,6 +13,7 @@ dependencies = ["numpy", "scipy", "matplotlib", "tqdm", "sympy"]
 [project.scripts]
 train_gp_surrogates = "gaussianprocesses.scripts:train_gp_surrogates"
 log_to_filepaths = "gaussianprocesses.scripts:log_to_filepaths"
+evaluate_gp_surrogates = "gaussianprocesses.scripts:evaluate_models"
 
 [tool.setuptools.packages.find]
 include = ["gaussianprocesses", "gaussianprocesses.*"]
