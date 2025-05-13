@@ -193,3 +193,40 @@ def mape(pred, data):
         float, mean absolute percentage error
     """
     return np.abs(((data - pred) / data)).mean() * 100
+
+
+class MetricFactory:
+    """Factory class to create metric functions
+
+    The factory class creates a dictionary of metric functions
+    based on the input arguments. The metric functions are
+    stored in the dictionary and can be accessed by their name.
+
+    Parameters
+    ----------
+    metrics
+        list of strings, names of the metrics to be created
+
+    Returns
+    -------
+    dict
+        dictionary of metric functions
+    """
+
+    metric_dict = {
+        'r_squared': r_squared,
+        'rmse': rmse,
+        'range_normalized_rmse': range_normalized_rmse,
+        'rnmse': range_normalized_rmse,
+        'mean_normalized_rmse': mean_normalized_rmse,
+        'mnrms': mean_normalized_rmse,
+        'iq_normalized_rmse': iq_normalized_rmse,
+        'iqrrmse': iq_normalized_rmse,
+        'mape': mape,
+    }
+
+    def get_metric(self, metric):
+        """Get the metric function by name"""
+        if metric not in self.metric_dict:
+            raise ValueError(f"Metric {metric} not found")
+        return self.metric_dict[metric]
