@@ -606,10 +606,7 @@ class GaussianProcessRegression():
         if isinstance(metric, list):
             performance = {}
             for m in metric:
-                try:
-                    test_func = metric_factory.get_metric(m)
-                except AttributeError:
-                    continue
+                test_func = metric_factory.get_metric(m)
                 performance[m] = test_func(prediction, compare)
         else:
             test_func = metric_factory.get_metric(metric)
