@@ -11,7 +11,7 @@ import pandas as pd
 
 import gaussianprocesses as gp
 
-METRICS = ["rmse", "r_squared", "mape", "rnmse", "mnrmse", "iqrrmse"]
+METRICS = ["rmse", "r_squared", "mape", "rnrmse", "mnrmse", "iqrrmse"]
 
 
 def argparser():
