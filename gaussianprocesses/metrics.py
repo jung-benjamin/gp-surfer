@@ -105,6 +105,72 @@ def rmse(pred, data):
     return np.sqrt(mse)
 
 
+def range_normalized_rmse(pred, data):
+    """Calculate the range normalized root mean squared error
+
+    The range normalized root mean squared error (RNRMSE) is
+    calculated by dividing the RMSE by the range of the data.
+
+    Parameters
+    ----------
+    pred
+        (nx1) array, model predictions
+    data
+        (nx1) array, data points
+
+    Returns
+    -------
+    rrmse
+        float, range normalized root mean squared error
+    """
+    rmse_val = rmse(pred, data)
+    return rmse_val / (data.max() - data.min())
+
+
+def mean_normalized_rmse(pred, data):
+    """Calculate the mean normalized root mean squared error
+
+    The mean normalized root mean squared error (MNRMSE) is
+    calculated by dividing the RMSE by the mean of the data.
+
+    Parameters
+    ----------
+    pred
+        (nx1) array, model predictions
+    data
+        (nx1) array, data points
+
+    Returns
+    -------
+    mnrms
+        float, mean normalized root mean squared error
+    """
+    rmse_val = rmse(pred, data)
+    return rmse_val / data.mean()
+
+
+def iq_normalized_rmse(pred, data):
+    """Calculate the interquartile range normalized root mean squared error
+
+    The interquartile range normalized root mean squared error (IQRRMSE) is
+    calculated by dividing the RMSE by the interquartile range of the data.
+
+    Parameters
+    ----------
+    pred
+        (nx1) array, model predictions
+    data
+        (nx1) array, data points
+
+    Returns
+    -------
+    iqr_rms
+        float, interquartile range normalized root mean squared error
+    """
+    rmse_val = rmse(pred, data)
+    return rmse_val / (np.percentile(data, 75) - np.percentile(data, 25))
+
+
 def mape(pred, data):
     """Calculate the mean absolute percentage error
 
