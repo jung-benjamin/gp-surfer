@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/994780944.svg)](https://doi.org/10.5281/zenodo.15576628)
+
 ## Gaussianprocesses
 A package for gaussian process regression in nuclear archaeology
 
