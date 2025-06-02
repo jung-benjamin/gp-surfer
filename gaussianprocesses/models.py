@@ -601,16 +601,15 @@ class GaussianProcessRegression():
                 warnings.warn('X and Y data do not match.')
         else:
             compare = y
+
+        metric_factory = metrics.MetricFactory()
         if isinstance(metric, list):
             performance = {}
             for m in metric:
-                try:
-                    test_func = getattr(metrics, m)
-                except AttributeError:
-                    continue
+                test_func = metric_factory.get_metric(m)
                 performance[m] = test_func(prediction, compare)
         else:
-            test_func = getattr(metrics, metric)
+            test_func = metric_factory.get_metric(metric)
             performance = test_func(prediction, compare)
         return performance
 

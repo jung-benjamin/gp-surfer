@@ -11,6 +11,8 @@ import pandas as pd
 
 import gaussianprocesses as gp
 
+METRICS = ["rmse", "r_squared", "mape", "rnrmse", "mnrmse", "iqrrmse"]
+
 
 def argparser():
     """Parse command line arguments."""
@@ -31,6 +33,12 @@ def argparser():
                         type=int)
     output_file = 'Name of output file'
     parser.add_argument('-o', '--out-file', help=output_file, type=Path)
+    metric = 'Metric to evaluate the model'
+    parser.add_argument('-t',
+                        '--metric',
+                        help=metric,
+                        default='r_squared',
+                        choices=METRICS)
     return parser.parse_args()
 
 
@@ -75,6 +83,16 @@ def calc_rsquared(model_dict, test_x, test_y):
     return r_sq
 
 
+def calc_metric(model_dict, test_x, test_y, metric):
+    """Calculate the given metric for each model."""
+    metric_dict = {}
+    for n, model in model_dict.items():
+        metric_dict[n] = model.evaluate_predictions(x=test_x.values,
+                                                    y=test_y.loc[n].values,
+                                                    metric=metric)
+    return metric_dict
+
+
 def load_models(args):
     """Load models based on input arguments"""
     return load_model_dict(args.model_file, args.model_dir)
@@ -91,9 +109,14 @@ def store_results(results, fp):
         json.dump(results, f, indent=True)
 
 
-if __name__ == '__main__':
+def evaluate_models():
+    """Evaluate the GP models."""
     args = argparser()
     models = load_models(args)
     x_test, y_test = load_data(args)
-    results = calc_rsquared(model_dict=models, test_x=x_test, test_y=y_test)
+    results = calc_metric(models, x_test, y_test, args.metric)
     store_results(results, args.out_file)
+
+
+if __name__ == '__main__':
+    evaluate_models()
