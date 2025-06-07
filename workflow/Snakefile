@@ -102,19 +102,36 @@ rule write_re_training_jobfile:
         template="workflow/templates/gp_training_job.sh",
         xtrain="results/surrogates/{model}/training-data/x_train.csv",
         ytrain="results/surrogates/{model}/training-data/y_train.csv",
-        nuclides="results/surrogates/{model}/gp-models/{model}_missing_nuclides_{i}.json",
+        model_keys="results/surrogates/{model}/{model}_missing_{i}.json.json",
+        slurm_config="results/slurm_config.json",
     output:
         "results/surrogates/{model}/re_training_{i}_jobfile.sh",
     params:
         logloc=lambda wildcards: f"results/surrogates/{wildcards.model}/logfiles",
         modelloc=lambda wildcards: f"results/surrogates/{wildcards.model}/gp-models",
-        wdir=lambda wildcards: f"{os.environ['HOME']}/projects/validating-bram",
-        repeat=lambda wildcards: int(wildcards.i) + 1,
-        seed=lambda wildcards: int(wildcards.i) * 69420,
-        num_train=config["num_train"],
+        wdir=config.get("working_dir", Path.cwd()),
+        job_out=lambda widlcards: config.get("job_output_dir", Path.cwd() / "results/surrogates/{wildcards.model}"),
+        num_train=config.get("num_train", 200),
+        code_env="source $HOME/code/scripts/load_venv.sh surrogate-env",
+        slurm_account=lambda x: f"account={os.environ.get('SLURM_ACCOUNT')}" if os.environ.get("SLURM_ACCOUNT") else "",
     shell:
-        "python workflow/scripts/write_training_jobfile.py {input.template} -x {input.xtrain} -y {input.ytrain} -l {params.logloc} -m {params.modelloc} -w {params.wdir} -f {input.nuclides} -n {wildcards.model} -j {output} --seed {params.seed} --run {params.repeat} --numtrain {params.num_train}"
-
+        """
+        python workflow/scripts/write_training_jobfile.py {input.template} \
+            -x {input.xtrain} \
+            -y {input.ytrain} \
+            -l {params.logloc} \
+            -m {params.modelloc} \
+            -w {params.wdir} \
+            -f {input.model_keys} \
+            -n {wildcards.model} \
+            -j {output} \
+            --seed {params.seed} \
+            --run {params.run} \
+            --numtrain {params.num_train} \
+            --slurm-args job_name=gp-training-{wildcards.model} output={params.job_out}/%x.%j.out {params.slurm_account}\
+            --slurm-config {input.slurm_config} \
+            --code-env "{params.code_env}"
+        """
 
 rule calc_metric:
     input:
