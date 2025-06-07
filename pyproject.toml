@@ -10,6 +10,9 @@ description = "A simple package for Gaussian process regression."
 requires-python = ">=3.10"
 dependencies = ["numpy", "scipy", "matplotlib", "tqdm", "sympy"]
 
+[project.optional-dependencies]
+workflow = ["snakemake>=8", "simple-slurm"]
+
 [project.scripts]
 train_gp_surrogates = "gaussianprocesses.scripts:train_gp_surrogates"
 log_to_filepaths = "gaussianprocesses.scripts:log_to_filepaths"
