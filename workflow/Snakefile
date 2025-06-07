@@ -128,7 +128,7 @@ rule write_re_training_jobfile:
             -n {wildcards.model} \
             -j {output} \
             --seed {params.seed} \
-            --run {params.run} \
+            --run {params.repeat} \
             --numtrain {params.num_train} \
             --slurm-args job_name=gp-training-{wildcards.model} output={params.job_out}/%x.%j.out {params.slurm_account}\
             --slurm-config {input.slurm_config} \
