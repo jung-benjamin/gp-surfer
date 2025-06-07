@@ -38,7 +38,7 @@ rule write_slurm_config:
 
 rule write_training_jobfile:
     input:
-        template="workflow/templates/gp_training_job.sh",
+        template="resources/templates/gp_training_job.sh",
         xtrain="results/surrogates/{model}/training-data/x_train.csv",
         ytrain="results/surrogates/{model}/training-data/y_train.csv",
         model_keys="results/surrogates/{model}/required_models.json",
@@ -99,7 +99,7 @@ rule determine_missing_nuclides:
 
 rule write_re_training_jobfile:
     input:
-        template="workflow/templates/gp_training_job.sh",
+        template="resources/templates/gp_training_job.sh",
         xtrain="results/surrogates/{model}/training-data/x_train.csv",
         ytrain="results/surrogates/{model}/training-data/y_train.csv",
         model_keys="results/surrogates/{model}/{model}_missing_{i}.json.json",
