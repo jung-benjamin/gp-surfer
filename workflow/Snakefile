@@ -112,6 +112,8 @@ rule write_re_training_jobfile:
         wdir=config.get("working_dir", Path.cwd()),
         job_out=lambda widlcards: config.get("job_output_dir", Path.cwd() / "results/surrogates/{wildcards.model}"),
         num_train=config.get("num_train", 200),
+        repeat=lambda wildcards: int(wildcards.i) + 1,
+        seed=lambda wildcards: int(wildcards.i) * 69420,
         code_env="source $HOME/code/scripts/load_venv.sh surrogate-env",
         slurm_account=lambda x: f"account={os.environ.get('SLURM_ACCOUNT')}" if os.environ.get("SLURM_ACCOUNT") else "",
     shell:
