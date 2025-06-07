@@ -1,0 +1,133 @@
+import os
+from pathlib import Path
+
+
+configfile: "config/config.yaml"
+
+
+rule update_models_from_logfile:
+    input:
+        log="results/surrogates/{model}/logfiles/training_{model}_{i}.log",
+        filepaths="results/surrogates/{model}/gp-models/{model}_filepaths.json",
+    output:
+        touch(
+            "results/surrogates/{model}/gp-models/{model}_update_{i}_t_{threshold}.txt"
+        ),
+    params:
+        threshold=lambda wildcards: float(wildcards.threshold),
+        drop=lambda wildcards: Path("results")
+        / "surrogates"
+        / wildcards.model
+        / "gp-models",
+    shell:
+        "log_to_filepaths {input.log} -t {params.threshold} -d {params.drop} -o {input.filepaths}"
+
+rule write_slurm_config:
+    output:
+        "results/slurm_config.json"
+    run:
+        import json
+
+        with open(output[0], "w") as f:
+            json.dump(
+                config.get("slurm-config", {}),
+                f,
+                indent=4,
+            )
+
+
+rule write_training_jobfile:
+    input:
+        template="workflow/templates/gp_training_job.sh",
+        xtrain="results/surrogates/{model}/training-data/x_train.csv",
+        ytrain="results/surrogates/{model}/training-data/y_train.csv",
+        model_keys="results/surrogates/{model}/required_models.json",
+        slurm_config="results/slurm_config.json",
+    output:
+        "results/surrogates/{model}/training_jobfile.sh",
+    params:
+        logloc=lambda wildcards: f"results/surrogates/{wildcards.model}/logfiles",
+        modelloc=lambda wildcards: f"results/surrogates/{wildcards.model}/gp-models",
+        wdir=config.get("working_dir", Path.cwd()),
+        job_out=lambda widlcards: config.get("job_output_dir", Path.cwd() / "results/surrogates/{wildcards.model}"),
+        num_train=config.get("num_train", 200),
+        code_env="source $HOME/code/scripts/load_venv.sh surrogate-env",
+        slurm_account=lambda x: f"account={os.environ.get('SLURM_ACCOUNT')}" if os.environ.get("SLURM_ACCOUNT") else "",
+    shell:
+        """
+        python workflow/scripts/write_training_jobfile.py {input.template} \
+            -x {input.xtrain} \
+            -y {input.ytrain} \
+            -l {params.logloc} \
+            -m {params.modelloc} \
+            -w {params.wdir} \
+            -f {input.model_keys} \
+            -n {wildcards.model} \
+            -j {output} \
+            --numtrain {params.num_train} \
+            --slurm-args job_name=gp-training-{wildcards.model} output={params.job_out}/%x.%j.out {params.slurm_account}\
+            --slurm-config {input.slurm_config} \
+            --code-env "{params.code_env}"
+        """
+
+
+rule setup_model_training:
+    input:
+        expand("results/surrogates/{model}/training_jobfile.sh", model=config["model"]),
+
+
+rule determine_missing_nuclides:
+    input:
+        model_keys="results/surrogates/{model}/required_models.json",
+        model_file="results/surrogates/{model}/gp-models/{model}_filepaths.json",
+    output:
+        "results/surrogates/{model}/gp-models/{model}_missing_{i}.json",
+    run:
+        import json
+
+        with open(input.model_keys) as f:
+            model_keys = json.load(f)
+
+        with open(input.model_file) as f:
+            model_file = json.load(f)
+
+        missing_models = set(model_keys) - set(model_file)
+
+        with open(output[0], "w") as f:
+            json.dump(sorted(missing_models), f, indent=4)
+
+
+rule write_re_training_jobfile:
+    input:
+        template="workflow/templates/gp_training_job.sh",
+        xtrain="results/surrogates/{model}/training-data/x_train.csv",
+        ytrain="results/surrogates/{model}/training-data/y_train.csv",
+        nuclides="results/surrogates/{model}/gp-models/{model}_missing_nuclides_{i}.json",
+    output:
+        "results/surrogates/{model}/re_training_{i}_jobfile.sh",
+    params:
+        logloc=lambda wildcards: f"results/surrogates/{wildcards.model}/logfiles",
+        modelloc=lambda wildcards: f"results/surrogates/{wildcards.model}/gp-models",
+        wdir=lambda wildcards: f"{os.environ['HOME']}/projects/validating-bram",
+        repeat=lambda wildcards: int(wildcards.i) + 1,
+        seed=lambda wildcards: int(wildcards.i) * 69420,
+        num_train=config["num_train"],
+    shell:
+        "python workflow/scripts/write_training_jobfile.py {input.template} -x {input.xtrain} -y {input.ytrain} -l {params.logloc} -m {params.modelloc} -w {params.wdir} -f {input.nuclides} -n {wildcards.model} -j {output} --seed {params.seed} --run {params.repeat} --numtrain {params.num_train}"
+
+
+rule calc_metric:
+    input:
+        x="results/surrogates/{model}/training-data/x_train.csv",
+        y="results/surrogates/{model}/training-data/y_train.csv",
+        m="results/surrogates/{model}/gp-models/{model}_filepaths.json",
+    output:
+        "results/surrogates/{model}/gp-models/{model}_{metric}.json",
+    wildcard_constraints:
+        metric="(rmse|r_squared|mape|rnrmse|mnrmse|iqrrmse)",
+    params:
+        ndata=config.get("num_test", 200),
+        model_dir=lambda wildcards: f"results/surrogates/{wildcards.model}/gp-models",
+        metric=lambda wildcards: wildcards.metric,
+    shell:
+        "evaluate_gp_surrogates -x {input.x} -y {input.y} -m {input.m} -n {params.ndata} -o {output} -d {params.model_dir} -t {params.metric}"
