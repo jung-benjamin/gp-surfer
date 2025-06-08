@@ -50,8 +50,8 @@ rule write_training_jobfile:
         logloc=lambda wildcards: f"results/surrogates/{wildcards.model}/logfiles",
         modelloc=lambda wildcards: f"results/surrogates/{wildcards.model}/gp-models",
         wdir=config.get("working_dir", Path.cwd()),
-        job_out=lambda widlcards: config.get(
-            "job_output_dir", Path.cwd() / "results/surrogates/{wildcards.model}"
+        job_out=lambda wildcards: config.get(
+            "job_output_dir", Path.cwd() / f"results/surrogates/{wildcards.model}"
         ),
         num_train=config.get("num_train", 200),
         code_env=config.get("code_env"),
@@ -117,7 +117,7 @@ rule write_re_training_jobfile:
         logloc=lambda wildcards: f"results/surrogates/{wildcards.model}/logfiles",
         modelloc=lambda wildcards: f"results/surrogates/{wildcards.model}/gp-models",
         wdir=config.get("working_dir", Path.cwd()),
-        job_out=lambda widlcards: config.get(
+        job_out=lambda wildcards: config.get(
             "job_output_dir", Path.cwd() / "results/surrogates/{wildcards.model}"
         ),
         num_train=config.get("num_train", 200),
@@ -143,7 +143,7 @@ rule write_re_training_jobfile:
             --seed {params.seed} \
             --run {params.repeat} \
             --numtrain {params.num_train} \
-            --slurm-args job_name=gp-training-{wildcards.model} output={params.job_out}/%x.%j.out {params.slurm_account}\
+            --slurm-args job_name=gp-training-{wildcards.model}-{params.repeat} output={params.job_out}/%x.%j.out {params.slurm_account} \
             --slurm-config {input.slurm_config} \
             --code-env "{params.code_env}"
         """
