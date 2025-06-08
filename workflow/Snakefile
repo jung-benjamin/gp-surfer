@@ -22,9 +22,10 @@ rule update_models_from_logfile:
     shell:
         "log_to_filepaths {input.log} -t {params.threshold} -d {params.drop} -o {input.filepaths}"
 
+
 rule write_slurm_config:
     output:
-        "results/slurm_config.json"
+        "results/slurm_config.json",
     run:
         import json
 
@@ -49,10 +50,16 @@ rule write_training_jobfile:
         logloc=lambda wildcards: f"results/surrogates/{wildcards.model}/logfiles",
         modelloc=lambda wildcards: f"results/surrogates/{wildcards.model}/gp-models",
         wdir=config.get("working_dir", Path.cwd()),
-        job_out=lambda widlcards: config.get("job_output_dir", Path.cwd() / "results/surrogates/{wildcards.model}"),
+        job_out=lambda widlcards: config.get(
+            "job_output_dir", Path.cwd() / "results/surrogates/{wildcards.model}"
+        ),
         num_train=config.get("num_train", 200),
-        code_env="source $HOME/code/scripts/load_venv.sh surrogate-env",
-        slurm_account=lambda x: f"account={os.environ.get('SLURM_ACCOUNT')}" if os.environ.get("SLURM_ACCOUNT") else "",
+        code_env=config.get("code_env"),
+        slurm_account=lambda x: (
+            f"account={os.environ.get('SLURM_ACCOUNT')}"
+            if os.environ.get("SLURM_ACCOUNT")
+            else ""
+        ),
     shell:
         """
         python workflow/scripts/write_training_jobfile.py {input.template} \
@@ -110,12 +117,18 @@ rule write_re_training_jobfile:
         logloc=lambda wildcards: f"results/surrogates/{wildcards.model}/logfiles",
         modelloc=lambda wildcards: f"results/surrogates/{wildcards.model}/gp-models",
         wdir=config.get("working_dir", Path.cwd()),
-        job_out=lambda widlcards: config.get("job_output_dir", Path.cwd() / "results/surrogates/{wildcards.model}"),
+        job_out=lambda widlcards: config.get(
+            "job_output_dir", Path.cwd() / "results/surrogates/{wildcards.model}"
+        ),
         num_train=config.get("num_train", 200),
         repeat=lambda wildcards: int(wildcards.i) + 1,
         seed=lambda wildcards: int(wildcards.i) * 69420,
-        code_env="source $HOME/code/scripts/load_venv.sh surrogate-env",
-        slurm_account=lambda x: f"account={os.environ.get('SLURM_ACCOUNT')}" if os.environ.get("SLURM_ACCOUNT") else "",
+        code_env=config.get("code_env"),
+        slurm_account=lambda x: (
+            f"account={os.environ.get('SLURM_ACCOUNT')}"
+            if os.environ.get("SLURM_ACCOUNT")
+            else ""
+        ),
     shell:
         """
         python workflow/scripts/write_training_jobfile.py {input.template} \
@@ -134,6 +147,7 @@ rule write_re_training_jobfile:
             --slurm-config {input.slurm_config} \
             --code-env "{params.code_env}"
         """
+
 
 rule calc_metric:
     input:
