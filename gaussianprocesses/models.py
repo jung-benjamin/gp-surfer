@@ -617,6 +617,7 @@ class GaussianProcessRegression():
                          x='test',
                          y=None,
                          plot_compare=True,
+                         save=None,
                          **pltkwargs):
         """Plot the model predictions"""
         prediction = self.predictions(x=x)
@@ -626,6 +627,8 @@ class GaussianProcessRegression():
             compare = getattr(self.data, y).y
             if y != x:
                 warnings.warn('X and Y data do not match.')
+        else:
+            compare = y
         if isinstance(x, str):
             xdata = getattr(self.data, x).x
         else:
@@ -636,7 +639,12 @@ class GaussianProcessRegression():
             ax.scatter(xdata[:, i], prediction, label='Prediction')
             if plot_compare:
                 ax.scatter(xdata[:, i], compare, label='True')
-        plt.show()
+        fig.legend(*axes[0].get_legend_handles_labels(),
+                   loc="outside upper center",
+                   ncol=2)
+        if save is not None:
+            fig.savefig(save)
+        return fig, axes
 
     def store_kernel(self, path, how='npy', exact_copy=False):
         """Store kernel with precomputed matrices
