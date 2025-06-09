@@ -109,7 +109,7 @@ rule write_re_training_jobfile:
         template="resources/templates/gp_training_job.sh",
         xtrain="results/surrogates/{model}/training-data/x_train.csv",
         ytrain="results/surrogates/{model}/training-data/y_train.csv",
-        model_keys="results/surrogates/{model}/{model}_missing_{i}.json.json",
+        model_keys="results/surrogates/{model}/{model}_missing_{i}.json",
         slurm_config="results/slurm_config.json",
     output:
         "results/surrogates/{model}/re_training_{i}_jobfile.sh",
