@@ -17,6 +17,7 @@ workflow = ["snakemake>=8", "simple-slurm"]
 train_gp_surrogates = "gaussianprocesses.scripts:train_gp_surrogates"
 log_to_filepaths = "gaussianprocesses.scripts:log_to_filepaths"
 evaluate_gp_surrogates = "gaussianprocesses.scripts:evaluate_models"
+plot_gp_predictions = "gaussianprocesses.scripts:plot_gp_predictions"
 
 [tool.setuptools.packages.find]
 include = ["gaussianprocesses", "gaussianprocesses.*"]
