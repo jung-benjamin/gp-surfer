@@ -176,7 +176,7 @@ def train_gp_surrogates():
         logging.info(
             f'Step {step: >{len(str(training_len))-len(str(step))}}/{training_len}: {iso}'
         )
-        file_name = f'{args.name}_{iso}_{args.run}.json'
+        file_name = f'{args.name}_{iso.replace("/", "-")}_{args.run}.json'
         training = train(name=iso,
                          x=x_data,
                          y=y_data,
